@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/dashboard/dashboard_screen.dart';
 
 import 'theme.dart';
 
@@ -11,14 +12,7 @@ class CourtManagerApp extends StatelessWidget {
       title: 'CourtManager',
       debugShowCheckedModeBanner: false,
       theme: appTheme,
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            '🎾 CourtManager',
-            style: TextStyle(fontSize: 28),
-          ),
-        ),
-      ),
+      home: const DashboardScreen(),
     );
   }
 }
