@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../attendance/attendance_screen.dart';
 import 'course.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -53,7 +53,16 @@ class DashboardScreen extends StatelessWidget {
                   final course = courses[index];
 
                   return Card(
-                    child: ListTile(
+                      child: ListTile(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AttendanceScreen(),
+                            ),
+                          );
+                        },
                       title: Text(course.name),
                       subtitle: Text(
                         '${course.time} - ${course.playersCount} adhérents',
