@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'adherent.dart';
+import 'session.dart';
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key});
@@ -77,6 +78,27 @@ class _AttendanceScreenState
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+
+              final session = Session(
+                date: DateTime.now(),
+                courseName: 'Mini Tennis',
+                presentAdherents: adherents
+                    .where((a) => a.present)
+                    .map((a) => a.fullName)
+                    .toList(),
+              );
+
+              debugPrint(
+                'Séance enregistrée : ${session.presentAdherents}',
+              );
+
+            },
+            child: const Text(
+              'Valider la séance',
             ),
           ),
         ],
