@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55983653236",
+    "project_id": "courtmanager-64e23",
+    "storage_bucket": "courtmanager-64e23.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55983653236:android:3cdcbe40ca1df06cf06c21",
+        "android_client_info": {
+          "package_name": "com.example.court_manager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgv1pKVwOGsmTzyv-6nqus0B5SyBFoj94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

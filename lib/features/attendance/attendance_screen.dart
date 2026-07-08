@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'adherent.dart';
+import 'adherent_repository.dart';
 import 'session.dart';
 
 class AttendanceScreen extends StatefulWidget {
@@ -14,24 +14,7 @@ class AttendanceScreen extends StatefulWidget {
 class _AttendanceScreenState
     extends State<AttendanceScreen> {
 
-  final List<Adherent> adherents = [
-    Adherent(
-      firstName: 'Arthur',
-      lastName: 'DUPONT',
-    ),
-    Adherent(
-      firstName: 'Emma',
-      lastName: 'MARTIN',
-    ),
-    Adherent(
-      firstName: 'Lucas',
-      lastName: 'BERNARD',
-    ),
-    Adherent(
-      firstName: 'Léa',
-      lastName: 'PETIT',
-    ),
-  ];
+    final adherents = AdherentRepository().getAdherentsForCourse();
 
   @override
   Widget build(BuildContext context) {
