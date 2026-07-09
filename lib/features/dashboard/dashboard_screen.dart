@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import '../auth/models/app_user.dart';
 import '../attendance/attendance_screen.dart';
 import 'course.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final AppUser user;
+
+  const DashboardScreen({
+    super.key,
+    required this.user,
+  });
 
   static const courses = [
     Course(
@@ -29,12 +35,12 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Bonjour Pierre',
-              style: TextStyle(
+            Text(
+              'Bonjour ${user.fullName}',
+               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-              ),
+                ),
             ),
 
             const SizedBox(height: 20),
