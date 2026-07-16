@@ -5,7 +5,7 @@ import '../data/user_repository.dart';
 import '../models/app_user.dart';
 
 import 'login_page.dart';
-import '../../dashboard/dashboard_screen.dart';
+import '../../dashboard/presentation/dashboard_screen.dart';
 
 
 class AuthGate extends StatelessWidget {
