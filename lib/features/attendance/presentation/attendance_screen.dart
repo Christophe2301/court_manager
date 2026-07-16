@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/models/session_model.dart';
 import '../data/attendance_repository.dart';
+
 
 class AttendanceScreen extends StatefulWidget {
 
@@ -152,7 +154,8 @@ class _AttendanceScreenState
   await repository.saveAttendances(
     sessionId: widget.session.id,
     attendance: _attendance,
-    userId: 'vLOZ73vvsLXbCaiGkXgPVJpxsTj2',
+    userId:
+    FirebaseAuth.instance.currentUser!.uid,
   );
 
 

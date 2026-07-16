@@ -97,10 +97,14 @@ class AttendanceRepository {
     attendance.forEach(
       (memberId, present) {
 
-        final doc =
-            _firestore
-                .collection('attendance')
-                .doc();
+       final docId =
+    '${sessionId}_$memberId';
+
+
+final doc =
+    _firestore
+        .collection('attendance')
+        .doc(docId);
 
 
         final record =
@@ -140,9 +144,12 @@ class AttendanceRepository {
 
 
         batch.set(
-          doc,
-          record.toFirestore(),
-        );
+  doc,
+  record.toFirestore(),
+  SetOptions(
+    merge: true,
+  ),
+);
       },
     );
 
