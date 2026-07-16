@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 enum AttendanceStatus {
   present,
   absent,
@@ -45,4 +46,88 @@ class Attendance {
   bool get isExcused {
     return status == AttendanceStatus.excused;
   }
+factory Attendance.fromFirestore(
+  DocumentSnapshot<Map<String, dynamic>> doc,
+) {
+
+  final data = doc.data()!;
+
+  return Attendance(
+    id: doc.id,
+
+    sessionId:
+        data['sessionId'] ?? '',
+
+    memberId:
+        data['memberId'] ?? '',
+
+    status:
+        AttendanceStatus.values.firstWhere(
+          (e) =>
+              e.name ==
+              (data['status'] ?? 'absent'),
+          orElse: () =>
+              AttendanceStatus.absent,
+        ),
+
+    comment:
+        data['comment'],
+
+    checkedAt:
+        data['checkedAt'] != null
+            ? (data['checkedAt'] as Timestamp)
+                .toDate()
+            : null,
+
+    createdAt:
+        (data['createdAt'] as Timestamp)
+            .toDate(),
+
+    updatedAt:
+        (data['updatedAt'] as Timestamp)
+            .toDate(),
+
+    createdBy:
+        data['createdBy'] ?? '',
+
+    updatedBy:
+        data['updatedBy'] ?? '',
+  );
+}
+
+
+Map<String, dynamic> toFirestore() {
+
+  return {
+
+    'sessionId':
+        sessionId,
+
+    'memberId':
+        memberId,
+
+    'status':
+        status.name,
+
+    'comment':
+        comment,
+
+    'checkedAt':
+        checkedAt != null
+            ? Timestamp.fromDate(checkedAt!)
+            : null,
+
+    'createdAt':
+        Timestamp.fromDate(createdAt),
+
+    'updatedAt':
+        Timestamp.fromDate(updatedAt),
+
+    'createdBy':
+        createdBy,
+
+    'updatedBy':
+        updatedBy,
+  };
+}
 }

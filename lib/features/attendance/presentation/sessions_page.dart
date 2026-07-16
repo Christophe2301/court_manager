@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/session_repository.dart';
 import '../../../core/models/session_model.dart';
+import 'attendance_screen.dart';
 
 
 class SessionsPage extends StatefulWidget {
@@ -81,20 +82,31 @@ class _SessionsPageState extends State<SessionsPage> {
 
                 child: ListTile(
 
-                  title: Text(
-                    session.groupId,
-                  ),
+  title: Text(
+    session.groupId,
+  ),
 
-                  subtitle: Text(
-                    '${session.date.day}/${session.date.month}/${session.date.year}'
-                    ' - ${session.startTime}'
-                    ' (${session.durationMinutes} min)',
-                  ),
+  subtitle: Text(
+    '${session.date.day}/${session.date.month}/${session.date.year}'
+    ' - ${session.startTime}'
+    ' (${session.durationMinutes} min)',
+  ),
 
-                  trailing: Text(
-                    session.status,
-                  ),
-                ),
+  trailing: Text(
+    session.status,
+  ),
+
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AttendanceScreen(
+          session: session,
+        ),
+      ),
+    );
+  },
+),
               );
             },
           );
