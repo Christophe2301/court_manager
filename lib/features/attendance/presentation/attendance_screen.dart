@@ -5,6 +5,7 @@ import '../../../core/models/session_model.dart';
 import '../data/attendance_repository.dart';
 import '../models/attendance_screen_data.dart';
 import '../../../core/models/attendance.dart';
+import '../widgets/attendance_status_chip.dart';
 
 
 class AttendanceScreen extends StatefulWidget {
@@ -126,12 +127,13 @@ final members =
                         members[index];
 
 
-                    final status =
+                    
     _attendance[member.id] ??
     AttendanceStatus.absent;
 
 
                    return ListTile(
+
   leading: const Icon(
     Icons.person,
   ),
@@ -144,32 +146,21 @@ final members =
     member.licenseNumber,
   ),
 
-  trailing: DropdownButton<AttendanceStatus>(
-    value: status,
+  trailing: AttendanceStatusChip(
 
-    items: AttendanceStatus.values
-        .map(
-          (item) => DropdownMenuItem(
-            value: item,
-            child: Text(
-              item.label,
-            ),
-          ),
-        )
-        .toList(),
+    status:
+        _attendance[member.id] ??
+        AttendanceStatus.absent,
 
-    onChanged: (value) {
-
-      if (value == null) {
-        return;
-      }
+    onChanged: (status) {
 
       setState(() {
 
         _attendance[member.id] =
-            value;
+            status;
 
       });
+
     },
   ),
 );
