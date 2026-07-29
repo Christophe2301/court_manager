@@ -3,7 +3,7 @@ import '../../../core/models/attendance.dart';
 
 class AttendanceScreenData {
   final List<Member> members;
-  final Map<String, Attendance> attendances;
+  final Map<String, AttendanceStatus> attendances;
 
   const AttendanceScreenData({
     required this.members,

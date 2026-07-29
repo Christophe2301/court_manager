@@ -30,6 +30,12 @@ class _AttendanceScreenState
 
   final Map<String, AttendanceStatus> _attendance = {};
 
+@override
+void initState() {
+  super.initState();
+
+  _loadAttendances();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -78,18 +84,20 @@ final members =
     data.members;
 
 
-if (_attendance.isEmpty) {
+
+    if (_attendance.isEmpty) {
 
   for (final member in members) {
 
-    final attendance =
+    final status =
         data.attendances[member.id];
 
     _attendance[member.id] =
-    attendance?.status ??
-    AttendanceStatus.absent;
+        status ??
+        AttendanceStatus.absent;
   }
 }
+
 
           if (members.isEmpty) {
 
@@ -220,4 +228,18 @@ if (_attendance.isEmpty) {
       ),
     );
   }
+  Future<void> _loadAttendances() async {
+
+  final saved =
+      await _repository.getAttendancesBySession(
+        widget.session.id,
+      );
+
+
+  setState(() {
+
+    _attendance.addAll(saved);
+
+  });
+}
 }

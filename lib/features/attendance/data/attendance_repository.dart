@@ -153,31 +153,7 @@ final doc =
 
     await batch.commit();
   }
-  Future<Map<String, Attendance>> getAttendancesBySession(
-  String sessionId,
-) async {
 
-  final snapshot = await _firestore
-      .collection('attendance')
-      .where(
-        'sessionId',
-        isEqualTo: sessionId,
-      )
-      .get();
-
-  final attendances = <String, Attendance>{};
-
-  for (final doc in snapshot.docs) {
-
-    final attendance =
-        Attendance.fromFirestore(doc);
-
-    attendances[attendance.memberId] =
-        attendance;
-  }
-
-  return attendances;
-}
 Future<AttendanceScreenData> getAttendanceScreenData(
   String sessionId,
   String groupId,
@@ -199,5 +175,35 @@ Future<AttendanceScreenData> getAttendanceScreenData(
     members: members,
     attendances: attendances,
   );
+}
+Future<Map<String, AttendanceStatus>> getAttendancesBySession(
+  String sessionId,
+) async {
+
+  final snapshot = await _firestore
+      .collection('attendance')
+      .where(
+        'sessionId',
+        isEqualTo: sessionId,
+      )
+      .get();
+
+
+  final result =
+      <String, AttendanceStatus>{};
+
+
+  for (final doc in snapshot.docs) {
+
+    final attendance =
+        Attendance.fromFirestore(doc);
+
+
+    result[attendance.memberId] =
+        attendance.status;
+  }
+
+
+  return result;
 }
 }
