@@ -8,6 +8,33 @@ enum AttendanceStatus {
   guest,
 }
 
+extension AttendanceStatusExtension on AttendanceStatus {
+
+  String get label {
+
+    switch (this) {
+
+      case AttendanceStatus.present:
+        return 'Présent';
+
+      case AttendanceStatus.absent:
+        return 'Absent';
+
+      case AttendanceStatus.excused:
+        return 'Excusé';
+
+      case AttendanceStatus.makeup:
+        return 'Rattrapage';
+
+      case AttendanceStatus.trial:
+        return 'Essai';
+
+      case AttendanceStatus.guest:
+        return 'Invité';
+    }
+  }
+}
+
 class Attendance {
   final String id;
 

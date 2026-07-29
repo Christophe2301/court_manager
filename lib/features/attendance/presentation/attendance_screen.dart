@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/models/session_model.dart';
 import '../data/attendance_repository.dart';
+import '../models/attendance_screen_data.dart';
+import '../../../core/models/attendance.dart';
 
 
 class AttendanceScreen extends StatefulWidget {
@@ -26,7 +28,7 @@ class _AttendanceScreenState
   final AttendanceRepository _repository =
       AttendanceRepository();
 
-  final Map<String, bool> _attendance = {};
+  final Map<String, AttendanceStatus> _attendance = {};
 
 
   @override
@@ -39,10 +41,11 @@ class _AttendanceScreenState
         ),
       ),
 
-      body: FutureBuilder(
-        future: _repository.getMembersByGroup(
+    body: FutureBuilder<AttendanceScreenData>(
+          future: _repository.getAttendanceScreenData(
+          widget.session.id,
           widget.session.groupId,
-        ),
+          ),
 
         builder: (
           context,
@@ -68,9 +71,25 @@ class _AttendanceScreenState
           }
 
 
-          final members =
-              snapshot.data ?? [];
+final data =
+    snapshot.data!;
 
+final members =
+    data.members;
+
+
+if (_attendance.isEmpty) {
+
+  for (final member in members) {
+
+    final attendance =
+        data.attendances[member.id];
+
+    _attendance[member.id] =
+    attendance?.status ??
+    AttendanceStatus.absent;
+  }
+}
 
           if (members.isEmpty) {
 
@@ -99,38 +118,53 @@ class _AttendanceScreenState
                         members[index];
 
 
-                    final isPresent =
-                        _attendance[member.id] ??
-                        false;
+                    final status =
+    _attendance[member.id] ??
+    AttendanceStatus.absent;
 
 
-                    return CheckboxListTile(
+                   return ListTile(
+  leading: const Icon(
+    Icons.person,
+  ),
 
-                      value: isPresent,
+  title: Text(
+    member.fullName,
+  ),
 
-                      title: Text(
-                        member.fullName,
-                      ),
+  subtitle: Text(
+    member.licenseNumber,
+  ),
 
-                      subtitle: Text(
-                        member.licenseNumber,
-                      ),
+  trailing: DropdownButton<AttendanceStatus>(
+    value: status,
 
-                      secondary:
-                          const Icon(
-                        Icons.person,
-                      ),
+    items: AttendanceStatus.values
+        .map(
+          (item) => DropdownMenuItem(
+            value: item,
+            child: Text(
+              item.label,
+            ),
+          ),
+        )
+        .toList(),
 
-                      onChanged: (value) {
+    onChanged: (value) {
 
-                        setState(() {
+      if (value == null) {
+        return;
+      }
 
-                          _attendance[member.id] =
-                              value ?? false;
+      setState(() {
 
-                        });
-                      },
-                    );
+        _attendance[member.id] =
+            value;
+
+      });
+    },
+  ),
+);
                   },
                 ),
               ),

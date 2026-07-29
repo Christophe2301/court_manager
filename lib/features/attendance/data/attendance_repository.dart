@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/models/member.dart';
 import '../../../core/models/attendance.dart';
-
+import '../models/attendance_screen_data.dart';
 
 class AttendanceRepository {
 
@@ -79,7 +79,7 @@ class AttendanceRepository {
 
     required String sessionId,
 
-    required Map<String, bool> attendance,
+    required Map<String, AttendanceStatus> attendance,
 
     required String userId,
 
@@ -95,7 +95,7 @@ class AttendanceRepository {
 
 
     attendance.forEach(
-      (memberId, present) {
+      (memberId, status) {
 
        final docId =
     '${sessionId}_$memberId';
@@ -118,10 +118,7 @@ final doc =
               memberId:
                   memberId,
 
-              status:
-                  present
-                      ? AttendanceStatus.present
-                      : AttendanceStatus.absent,
+              status: status,
 
               comment:
                   null,
@@ -156,4 +153,51 @@ final doc =
 
     await batch.commit();
   }
+  Future<Map<String, Attendance>> getAttendancesBySession(
+  String sessionId,
+) async {
+
+  final snapshot = await _firestore
+      .collection('attendance')
+      .where(
+        'sessionId',
+        isEqualTo: sessionId,
+      )
+      .get();
+
+  final attendances = <String, Attendance>{};
+
+  for (final doc in snapshot.docs) {
+
+    final attendance =
+        Attendance.fromFirestore(doc);
+
+    attendances[attendance.memberId] =
+        attendance;
+  }
+
+  return attendances;
+}
+Future<AttendanceScreenData> getAttendanceScreenData(
+  String sessionId,
+  String groupId,
+) async {
+
+  final membersFuture =
+      getMembersByGroup(groupId);
+
+  final attendancesFuture =
+      getAttendancesBySession(sessionId);
+
+  final members =
+      await membersFuture;
+
+  final attendances =
+      await attendancesFuture;
+
+  return AttendanceScreenData(
+    members: members,
+    attendances: attendances,
+  );
+}
 }
