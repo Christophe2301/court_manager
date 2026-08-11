@@ -245,7 +245,27 @@ setState(() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+
+return PopScope(
+  canPop: !_hasUnsavedChanges,
+  onPopInvokedWithResult: (
+    didPop,
+    result,
+  ) async {
+    if (didPop) {
+      return;
+    }
+
+    final shouldLeave =
+        await _confirmLeave();
+
+    if (!context.mounted || !shouldLeave) {
+      return;
+    }
+
+    Navigator.of(context).pop();
+  },
+  child: Scaffold(
       appBar: AppBar(
         title: const Text('Appel'),
       ),
@@ -404,6 +424,7 @@ _buildAttendanceStatus(),
   ),
 ),
 
+
 const Divider(height: 1),
 
                   // --------------------------------------------------
@@ -545,6 +566,7 @@ const Divider(height: 1),
           );
         },
       ),
+  ),
     );
   }
 
@@ -607,6 +629,53 @@ Widget _buildAttendanceStatus() {
     ],
   );
 }
+
+Future<bool> _confirmLeave() async {
+  if (!_hasUnsavedChanges) {
+    return true;
+  }
+
+  if (!mounted) {
+    return false;
+  }
+
+  final shouldLeave = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Modifications non enregistrées',
+        ),
+        content: const Text(
+          'Vous avez modifié l\'appel sans '
+          'l\'enregistrer.\n\n'
+          'Voulez-vous quitter sans enregistrer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text(
+              'Rester',
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text(
+              'Quitter',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  return shouldLeave ?? false;
+}
+
 
 Future<void> _loadAttendances() async {
   final saved =
