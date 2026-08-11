@@ -19,7 +19,8 @@ class SessionsPage extends StatefulWidget {
       _SessionsPageState();
 }
 
-class _SessionsPageState extends State<SessionsPage> {
+class _SessionsPageState
+    extends State<SessionsPage> {
   final SessionRepository _sessionRepository =
       SessionRepository();
 
@@ -52,6 +53,15 @@ class _SessionsPageState extends State<SessionsPage> {
         date.month.toString().padLeft(2, '0');
 
     return '$day/$month/${date.year}';
+  }
+
+  bool _isSameDay(
+    DateTime first,
+    DateTime second,
+  ) {
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 
   String _formatStatus(String status) {
@@ -102,6 +112,281 @@ class _SessionsPageState extends State<SessionsPage> {
     }
   }
 
+  Widget _buildSectionTitle(
+    String title,
+    IconData icon,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        left: 4,
+        top: 12,
+        bottom: 8,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(
+    BuildContext context,
+    SessionModel session,
+    Map<String, Group> groupsById,
+    bool isToday,
+  ) {
+    final group =
+        groupsById[session.groupId];
+
+    final groupName =
+        group?.name ?? session.groupId;
+
+    final statusColor =
+        _statusColor(session.status);
+
+    return Card(
+      margin: const EdgeInsets.only(
+        bottom: 10,
+      ),
+      elevation: isToday ? 4 : 1,
+      child: InkWell(
+        borderRadius:
+            BorderRadius.circular(12),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  AttendanceScreen(
+                session: session,
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                padding:
+                    const EdgeInsets.symmetric(
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius:
+                      BorderRadius.circular(10),
+                  color: isToday
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primary
+                      : Theme.of(context)
+                          .colorScheme
+                          .primaryContainer,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      session.date.day
+                          .toString()
+                          .padLeft(2, '0'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight:
+                            FontWeight.bold,
+                        color: isToday
+                            ? Colors.white
+                            : null,
+                      ),
+                    ),
+                    Text(
+                      session.date.month
+                          .toString()
+                          .padLeft(2, '0'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isToday
+                            ? Colors.white
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            groupName,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight:
+                                  FontWeight.bold,
+                              color: isToday
+                                  ? Theme.of(
+                                      context,
+                                    )
+                                      .colorScheme
+                                      .primary
+                                  : null,
+                            ),
+                          ),
+                        ),
+
+                        if (isToday)
+                          Container(
+                            padding:
+                                const EdgeInsets
+                                    .symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration:
+                                BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              )
+                                  .colorScheme
+                                  .primary
+                                  .withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                20,
+                              ),
+                            ),
+                            child: const Text(
+                              "Aujourd'hui",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight:
+                                    FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _formatDate(
+                            session.date,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.schedule,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${session.startTime} • '
+                          '${session.durationMinutes} min',
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration:
+                          BoxDecoration(
+                        color: statusColor
+                            .withValues(
+                          alpha: 0.12,
+                        ),
+                        borderRadius:
+                            BorderRadius.circular(
+                          20,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize:
+                            MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _statusIcon(
+                              session.status,
+                            ),
+                            size: 16,
+                            color:
+                                statusColor,
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            _formatStatus(
+                              session.status,
+                            ),
+                            style: TextStyle(
+                              color:
+                                  statusColor,
+                              fontWeight:
+                                  FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              const Icon(
+                Icons.chevron_right,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,18 +395,23 @@ class _SessionsPageState extends State<SessionsPage> {
       ),
       body: FutureBuilder<List<SessionModel>>(
         future: _sessionsFuture,
-        builder: (context, sessionSnapshot) {
+        builder: (
+          context,
+          sessionSnapshot,
+        ) {
           if (sessionSnapshot.connectionState ==
               ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child:
+                  CircularProgressIndicator(),
             );
           }
 
           if (sessionSnapshot.hasError) {
             return Center(
               child: Text(
-                'Erreur : ${sessionSnapshot.error}',
+                'Erreur : '
+                '${sessionSnapshot.error}',
               ),
             );
           }
@@ -147,14 +437,16 @@ class _SessionsPageState extends State<SessionsPage> {
               if (groupSnapshot.connectionState ==
                   ConnectionState.waiting) {
                 return const Center(
-                  child: CircularProgressIndicator(),
+                  child:
+                      CircularProgressIndicator(),
                 );
               }
 
               if (groupSnapshot.hasError) {
                 return Center(
                   child: Text(
-                    'Erreur lors du chargement des groupes : '
+                    'Erreur lors du chargement '
+                    'des groupes : '
                     '${groupSnapshot.error}',
                   ),
                 );
@@ -168,240 +460,81 @@ class _SessionsPageState extends State<SessionsPage> {
                   group.id: group,
               };
 
-              return ListView.builder(
+              final now = DateTime.now();
+
+              final today = <SessionModel>[];
+              final upcoming = <SessionModel>[];
+              final past = <SessionModel>[];
+
+              for (final session in sessions) {
+                if (_isSameDay(
+                  session.date,
+                  now,
+                )) {
+                  today.add(session);
+                } else if (session.date
+                    .isAfter(now)) {
+                  upcoming.add(session);
+                } else {
+                  past.add(session);
+                }
+              }
+
+              return ListView(
                 padding:
                     const EdgeInsets.all(12),
-                itemCount: sessions.length,
-                itemBuilder: (
-                  context,
-                  index,
-                ) {
-                  final session =
-                      sessions[index];
-
-                  final group =
-                      groupsById[session.groupId];
-
-                  final groupName =
-                      group?.name ??
-                      session.groupId;
-
-                  final statusColor =
-                      _statusColor(
-                    session.status,
-                  );
-
-                  return Card(
-                    margin:
-                        const EdgeInsets.only(
-                      bottom: 10,
+                children: [
+                  if (today.isNotEmpty) ...[
+                    _buildSectionTitle(
+                      "Aujourd'hui",
+                      Icons.today,
                     ),
-                    child: InkWell(
-                      borderRadius:
-                          BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                AttendanceScreen(
-                              session: session,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 58,
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                vertical: 8,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(10),
-                                color: Theme.of(
-                                  context,
-                                )
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    session.date.day
-                                        .toString()
-                                        .padLeft(
-                                          2,
-                                          '0',
-                                        ),
-                                    style:
-                                        const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    session.date.month
-                                        .toString()
-                                        .padLeft(
-                                          2,
-                                          '0',
-                                        ),
-                                    style:
-                                        const TextStyle(
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
 
-                            const SizedBox(
-                              width: 14,
-                            ),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
-                                children: [
-                                  Text(
-                                    groupName,
-                                    style:
-                                        const TextStyle(
-                                      fontSize: 17,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                    ),
-                                  ),
-
-                                  const SizedBox(
-                                    height: 6,
-                                  ),
-
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons
-                                            .calendar_today,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                        _formatDate(
-                                          session.date,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(
-                                    height: 4,
-                                  ),
-
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.schedule,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(
-                                        width: 5,
-                                      ),
-                                      Text(
-                                        '${session.startTime} • '
-                                        '${session.durationMinutes} min',
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(
-                                    height: 8,
-                                  ),
-
-                                  Container(
-                                    padding:
-                                        const EdgeInsets
-                                            .symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration:
-                                        BoxDecoration(
-                                      color:
-                                          statusColor
-                                              .withValues(
-                                        alpha: 0.12,
-                                      ),
-                                      borderRadius:
-                                          BorderRadius
-                                              .circular(
-                                        20,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize:
-                                          MainAxisSize
-                                              .min,
-                                      children: [
-                                        Icon(
-                                          _statusIcon(
-                                            session.status,
-                                          ),
-                                          size: 16,
-                                          color:
-                                              statusColor,
-                                        ),
-                                        const SizedBox(
-                                          width: 5,
-                                        ),
-                                        Text(
-                                          _formatStatus(
-                                            session.status,
-                                          ),
-                                          style:
-                                              TextStyle(
-                                            color:
-                                                statusColor,
-                                            fontWeight:
-                                                FontWeight
-                                                    .w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const SizedBox(
-                              width: 8,
-                            ),
-
-                            const Icon(
-                              Icons.chevron_right,
-                            ),
-                          ],
-                        ),
+                    ...today.map(
+                      (session) =>
+                          _buildSessionCard(
+                        context,
+                        session,
+                        groupsById,
+                        true,
                       ),
                     ),
-                  );
-                },
+                  ],
+
+                  if (upcoming.isNotEmpty) ...[
+                    _buildSectionTitle(
+                      'À venir',
+                      Icons.event,
+                    ),
+
+                    ...upcoming.map(
+                      (session) =>
+                          _buildSessionCard(
+                        context,
+                        session,
+                        groupsById,
+                        false,
+                      ),
+                    ),
+                  ],
+
+                  if (past.isNotEmpty) ...[
+                    _buildSectionTitle(
+                      'Passées',
+                      Icons.history,
+                    ),
+
+                    ...past.map(
+                      (session) =>
+                          _buildSessionCard(
+                        context,
+                        session,
+                        groupsById,
+                        false,
+                      ),
+                    ),
+                  ],
+                ],
               );
             },
           );
