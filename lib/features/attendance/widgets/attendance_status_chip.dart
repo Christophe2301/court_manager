@@ -63,52 +63,75 @@ class AttendanceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Modifier le statut',
-      child: PopupMenuButton<AttendanceStatus>(
-        initialValue: status,
-        onSelected: onChanged,
-        tooltip: 'Modifier le statut',
-        itemBuilder: (context) {
-          return AttendanceStatus.values.map(
-            (value) {
-              return PopupMenuItem<AttendanceStatus>(
-                value: value,
-                child: Row(
-                  children: [
-                    Icon(
+    return PopupMenuButton<AttendanceStatus>(
+      initialValue: status,
+      onSelected: onChanged,
+      tooltip: 'Modifier le statut',
+
+      padding: EdgeInsets.zero,
+
+      itemBuilder: (context) {
+        return AttendanceStatus.values.map(
+          (value) {
+            return PopupMenuItem<AttendanceStatus>(
+              value: value,
+
+              height: 52,
+
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color:
+                          _colorFor(value).withValues(
+                        alpha: 0.12,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
                       _iconFor(value),
                       size: 20,
                       color: _colorFor(value),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _labelFor(value),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Text(
+                    _labelFor(value),
+                    style: const TextStyle(
+                      fontSize: 16,
                     ),
-                  ],
-                ),
-              );
-            },
-          ).toList();
-        },
-        child: Chip(
-          avatar: Icon(
-            icon,
+                  ),
+                ],
+              ),
+            );
+          },
+        ).toList();
+      },
+
+      child: Chip(
+        avatar: Icon(
+          icon,
+          color: Colors.white,
+          size: 18,
+        ),
+
+        label: Text(
+          label,
+          style: const TextStyle(
             color: Colors.white,
-            size: 18,
+            fontWeight: FontWeight.w600,
           ),
-          label: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 6,
-            vertical: 4,
-          ),
+        ),
+
+        backgroundColor: color,
+
+        padding: const EdgeInsets.symmetric(
+          horizontal: 6,
+          vertical: 4,
         ),
       ),
     );
@@ -186,4 +209,3 @@ class AttendanceStatusChip extends StatelessWidget {
     }
   }
 }
-
