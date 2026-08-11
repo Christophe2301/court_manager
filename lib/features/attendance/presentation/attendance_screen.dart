@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/models/session_model.dart';
+import '../../../core/models/group.dart';
 import '../data/attendance_repository.dart';
 import '../models/attendance_screen_data.dart';
 import '../../../core/models/attendance.dart';
 import '../widgets/attendance_status_chip.dart';
+import '../../groups/data/group_repository.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final SessionModel session;
@@ -25,12 +27,25 @@ class _AttendanceScreenState
   final AttendanceRepository _repository =
       AttendanceRepository();
 
+  final GroupRepository _groupRepository =
+      GroupRepository();
+
   final Map<String, AttendanceStatus> _attendance = {};
+
+  late Future<List<Group>> _groupsFuture;
 
   @override
   void initState() {
     super.initState();
+
     _loadAttendances();
+
+    _groupsFuture =
+        _groupRepository
+            .watchGroupsForTeacher(
+              widget.session.teacherIds.first,
+            )
+            .first;
   }
 
   Map<AttendanceStatus, int> _getStatusCounts() {
@@ -42,6 +57,16 @@ class _AttendanceScreenState
     }
 
     return counts;
+  }
+
+  String _formatDate(DateTime date) {
+    final day =
+        date.day.toString().padLeft(2, '0');
+
+    final month =
+        date.month.toString().padLeft(2, '0');
+
+    return '$day/$month/${date.year}';
   }
 
   Future<void> _confirmSave(
@@ -127,6 +152,89 @@ class _AttendanceScreenState
     );
   }
 
+  Widget _buildSessionHeader(
+    BuildContext context,
+    Group? group,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        14,
+        16,
+        14,
+      ),
+      color: Theme.of(context)
+          .colorScheme
+          .surfaceContainerHighest,
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Text(
+            group?.name ?? widget.session.groupId,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatDate(
+                      widget.session.date,
+                    ),
+                  ),
+                ],
+              ),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.schedule,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.session.startTime,
+                  ),
+                ],
+              ),
+
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.timelapse,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.session.durationMinutes} min',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,7 +266,6 @@ class _AttendanceScreenState
           }
 
           final data = snapshot.data!;
-
           final members = data.members;
 
           if (_attendance.isEmpty) {
@@ -183,195 +290,237 @@ class _AttendanceScreenState
           final statusCounts =
               _getStatusCounts();
 
-          return Column(
-            children: [
-              // --------------------------------------------------
-              // Résumé
-              // --------------------------------------------------
-              Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  8,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${members.length} adhérents',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight:
-                                  FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 4,
+          return FutureBuilder<List<Group>>(
+            future: _groupsFuture,
+            builder: (
+              context,
+              groupSnapshot,
+            ) {
+              Group? group;
+
+              if (groupSnapshot.hasData) {
+                for (final item
+                    in groupSnapshot.data!) {
+                  if (item.id ==
+                      widget.session.groupId) {
+                    group = item;
+                    break;
+                  }
+                }
+              }
+
+              return Column(
+                children: [
+                  _buildSessionHeader(
+                    context,
+                    group,
+                  ),
+
+                  // --------------------------------------------------
+                  // Résumé
+                  // --------------------------------------------------
+                  Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      8,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
                             children: [
                               Text(
-                                '🟢 ${statusCounts[AttendanceStatus.present] ?? 0}',
+                                '${members.length} adhérents',
+                                style:
+                                    const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight:
+                                      FontWeight.bold,
+                                ),
                               ),
-                              Text(
-                                '🔴 ${statusCounts[AttendanceStatus.absent] ?? 0}',
+                              const SizedBox(
+                                height: 6,
                               ),
-                              Text(
-                                '🟠 ${statusCounts[AttendanceStatus.excused] ?? 0}',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      icon: const Icon(
-                        Icons.done_all,
-                      ),
-                      label: const Text(
-                        'Tous présents',
-                      ),
-                      onPressed: () {
-                        _markAllPresent(members);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(height: 1),
-
-              // --------------------------------------------------
-              // Liste des adhérents
-              // --------------------------------------------------
-              Expanded(
-                child: ListView.builder(
-                  padding:
-                      const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  itemCount: members.length,
-                  itemBuilder: (
-                    context,
-                    index,
-                  ) {
-                    final member =
-                        members[index];
-
-                    final status =
-                        _attendance[member.id] ??
-                            AttendanceStatus.absent;
-
-                    return Card(
-                      margin:
-                          const EdgeInsets.only(
-                        bottom: 8,
-                      ),
-                      child: Padding(
-                        padding:
-                            const EdgeInsets
-                                .symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        child: Row(
-                          children: [
-                            const CircleAvatar(
-                              child: Icon(
-                                Icons.person,
-                              ),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 4,
                                 children: [
                                   Text(
-                                    member.fullName,
-                                    style:
-                                        const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight:
-                                          FontWeight
-                                              .w600,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    height: 3,
+                                    '🟢 ${statusCounts[AttendanceStatus.present] ?? 0}',
                                   ),
                                   Text(
-                                    'Licence : ${member.licenseNumber}',
-                                    style:
-                                        TextStyle(
-                                      color: Colors
-                                          .grey[600],
-                                      fontSize: 13,
-                                    ),
+                                    '🔴 ${statusCounts[AttendanceStatus.absent] ?? 0}',
+                                  ),
+                                  Text(
+                                    '🟠 ${statusCounts[AttendanceStatus.excused] ?? 0}',
                                   ),
                                 ],
                               ),
-                            ),
-
-                            AttendanceStatusChip(
-                              status: status,
-                              onChanged:
-                                  (newStatus) {
-                                setState(() {
-                                  _attendance[
-                                          member.id] =
-                                      newStatus;
-                                });
-                              },
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // --------------------------------------------------
-              // Bouton d'enregistrement
-              // --------------------------------------------------
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.fromLTRB(
-                    16,
-                    8,
-                    16,
-                    16,
+                        ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.done_all,
+                          ),
+                          label: const Text(
+                            'Tous présents',
+                          ),
+                          onPressed: () {
+                            _markAllPresent(
+                              members,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      icon: const Icon(
-                        Icons.save,
+
+                  const Divider(height: 1),
+
+                  // --------------------------------------------------
+                  // Liste des adhérents
+                  // --------------------------------------------------
+                  Expanded(
+                    child: ListView.builder(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      onPressed: () {
-                        _confirmSave(context);
+                      itemCount: members.length,
+                      itemBuilder: (
+                        context,
+                        index,
+                      ) {
+                        final member =
+                            members[index];
+
+                        final status =
+                            _attendance[
+                                    member.id] ??
+                                AttendanceStatus
+                                    .absent;
+
+                        return Card(
+                          margin:
+                              const EdgeInsets
+                                  .only(
+                            bottom: 8,
+                          ),
+                          child: Padding(
+                            padding:
+                                const EdgeInsets
+                                    .symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  child: Icon(
+                                    Icons.person,
+                                  ),
+                                ),
+
+                                const SizedBox(
+                                  width: 12,
+                                ),
+
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .start,
+                                    children: [
+                                      Text(
+                                        member.fullName,
+                                        style:
+                                            const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight:
+                                              FontWeight
+                                                  .w600,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        height: 3,
+                                      ),
+                                      Text(
+                                        'Licence : ${member.licenseNumber}',
+                                        style:
+                                            TextStyle(
+                                          color: Colors
+                                              .grey[600],
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                AttendanceStatusChip(
+                                  status: status,
+                                  onChanged:
+                                      (newStatus) {
+                                    setState(() {
+                                      _attendance[
+                                              member
+                                                  .id] =
+                                          newStatus;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
                       },
-                      label: const Text(
-                        'Valider l\'appel',
+                    ),
+                  ),
+
+                  // --------------------------------------------------
+                  // Bouton d'enregistrement
+                  // --------------------------------------------------
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.fromLTRB(
+                        16,
+                        8,
+                        16,
+                        16,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child:
+                            ElevatedButton.icon(
+                          icon: const Icon(
+                            Icons.save,
+                          ),
+                          onPressed: () {
+                            _confirmSave(
+                              context,
+                            );
+                          },
+                          label: const Text(
+                            'Valider l\'appel',
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
@@ -402,4 +551,3 @@ class _AttendanceScreenState
     });
   }
 }
-
