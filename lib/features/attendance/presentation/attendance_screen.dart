@@ -316,73 +316,85 @@ class _AttendanceScreenState
                     group,
                   ),
 
-                  // --------------------------------------------------
-                  // Résumé
-                  // --------------------------------------------------
-                  Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(
-                      16,
-                      12,
-                      16,
-                      8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
-                            children: [
-                              Text(
-                                '${members.length} adhérents',
-                                style:
-                                    const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 6,
-                              ),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 4,
-                                children: [
-                                  Text(
-                                    '🟢 ${statusCounts[AttendanceStatus.present] ?? 0}',
-                                  ),
-                                  Text(
-                                    '🔴 ${statusCounts[AttendanceStatus.absent] ?? 0}',
-                                  ),
-                                  Text(
-                                    '🟠 ${statusCounts[AttendanceStatus.excused] ?? 0}',
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          icon: const Icon(
-                            Icons.done_all,
-                          ),
-                          label: const Text(
-                            'Tous présents',
-                          ),
-                          onPressed: () {
-                            _markAllPresent(
-                              members,
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
 
-                  const Divider(height: 1),
+// --------------------------------------------------
+// Résumé
+// --------------------------------------------------
+Padding(
+  padding: const EdgeInsets.fromLTRB(
+    16,
+    12,
+    16,
+    12,
+  ),
+  child: Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        '${members.length} adhérents',
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 6),
+
+      Wrap(
+        spacing: 14,
+        runSpacing: 4,
+        children: [
+          Text(
+            '🟢 ${statusCounts[AttendanceStatus.present] ?? 0}',
+          ),
+          Text(
+            '🔴 ${statusCounts[AttendanceStatus.absent] ?? 0}',
+          ),
+          Text(
+            '🟠 ${statusCounts[AttendanceStatus.excused] ?? 0}',
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 12),
+
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          icon: const Icon(
+            Icons.done_all,
+          ),
+          label: const Text(
+            'Tous présents',
+          ),
+          onPressed: () {
+            _markAllPresent(members);
+          },
+        ),
+      ),
+
+      const SizedBox(height: 8),
+
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          icon: const Icon(
+            Icons.remove_done,
+          ),
+          label: const Text(
+            'Tous absents',
+          ),
+          onPressed: () {
+            _markAllAbsent(members);
+          },
+        ),
+      ),
+    ],
+  ),
+),
+
+const Divider(height: 1),
 
                   // --------------------------------------------------
                   // Liste des adhérents
@@ -550,4 +562,12 @@ class _AttendanceScreenState
       }
     });
   }
+  void _markAllAbsent(List members) {
+  setState(() {
+    for (final member in members) {
+      _attendance[member.id] =
+          AttendanceStatus.absent;
+    }
+  });
+}
 }
