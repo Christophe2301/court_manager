@@ -32,6 +32,9 @@ class _AttendanceScreenState
 
   final Map<String, AttendanceStatus> _attendance = {};
 
+  bool _hasSavedAttendance = false;
+  bool _hasUnsavedChanges = false;
+
   late Future<List<Group>> _groupsFuture;
 
   @override
@@ -140,6 +143,11 @@ class _AttendanceScreenState
       userId:
           FirebaseAuth.instance.currentUser!.uid,
     );
+
+setState(() {
+  _hasSavedAttendance = true;
+  _hasUnsavedChanges = false;
+});
 
     if (!context.mounted) {
       return;
@@ -339,7 +347,9 @@ Padding(
         ),
       ),
 
-      const SizedBox(height: 6),
+const SizedBox(height: 6),
+
+_buildAttendanceStatus(),
 
       Wrap(
         spacing: 14,
@@ -480,15 +490,14 @@ const Divider(height: 1),
 
                                 AttendanceStatusChip(
                                   status: status,
-                                  onChanged:
-                                      (newStatus) {
-                                    setState(() {
-                                      _attendance[
-                                              member
-                                                  .id] =
-                                          newStatus;
-                                    });
-                                  },
+                                  onChanged: (newStatus) {
+  setState(() {
+    _attendance[member.id] =
+        newStatus;
+
+    _hasUnsavedChanges = true;
+  });
+},
                                 ),
                               ],
                             ),
@@ -539,30 +548,92 @@ const Divider(height: 1),
     );
   }
 
-  Future<void> _loadAttendances() async {
-    final saved =
-        await _repository.getAttendancesBySession(
-      widget.session.id,
+Widget _buildAttendanceStatus() {
+  if (_hasUnsavedChanges) {
+    return const Row(
+      children: [
+        Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.orange,
+          size: 18,
+        ),
+        SizedBox(width: 6),
+        Text(
+          'Modifications non enregistrées',
+          style: TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
+  }
 
-    if (!mounted) {
-      return;
+  if (_hasSavedAttendance) {
+    return const Row(
+      children: [
+        Icon(
+          Icons.check_circle,
+          color: Colors.green,
+          size: 18,
+        ),
+        SizedBox(width: 6),
+        Text(
+          'Appel enregistré',
+          style: TextStyle(
+            color: Colors.green,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  return const Row(
+    children: [
+      Icon(
+        Icons.radio_button_unchecked,
+        color: Colors.grey,
+        size: 18,
+      ),
+      SizedBox(width: 6),
+      Text(
+        'Appel non effectué',
+        style: TextStyle(
+          color: Colors.grey,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ],
+  );
+}
+
+Future<void> _loadAttendances() async {
+  final saved =
+      await _repository.getAttendancesBySession(
+    widget.session.id,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  setState(() {
+    _attendance.addAll(saved);
+    _hasSavedAttendance = saved.isNotEmpty;
+    _hasUnsavedChanges = false;
+  });
+}
+void _markAllPresent(List members) {
+  setState(() {
+    for (final member in members) {
+      _attendance[member.id] =
+          AttendanceStatus.present;
     }
 
-    setState(() {
-      _attendance.addAll(saved);
-    });
-  }
-
-  void _markAllPresent(List members) {
-    setState(() {
-      for (final member in members) {
-        _attendance[member.id] =
-            AttendanceStatus.present;
-      }
-    });
-  }
-
+    _hasUnsavedChanges = true;
+  });
+}
 Future<void> _confirmMarkAllAbsent(
   List members,
 ) async {
@@ -606,12 +677,13 @@ Future<void> _confirmMarkAllAbsent(
   _markAllAbsent(members);
 }
 
-  void _markAllAbsent(List members) {
+void _markAllAbsent(List members) {
   setState(() {
     for (final member in members) {
       _attendance[member.id] =
           AttendanceStatus.absent;
     }
+
+    _hasUnsavedChanges = true;
   });
-}
-}
+}}
