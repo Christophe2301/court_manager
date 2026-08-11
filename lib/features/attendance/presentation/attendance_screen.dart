@@ -386,8 +386,8 @@ Padding(
             'Tous absents',
           ),
           onPressed: () {
-            _markAllAbsent(members);
-          },
+  _confirmMarkAllAbsent(members);
+},
         ),
       ),
     ],
@@ -562,6 +562,50 @@ const Divider(height: 1),
       }
     });
   }
+
+Future<void> _confirmMarkAllAbsent(
+  List members,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Mettre tous les adhérents absents ?',
+        ),
+        content: Text(
+          '${members.length} adhérents seront '
+          'marqués comme absents.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text(
+              'Confirmer',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  _markAllAbsent(members);
+}
+
   void _markAllAbsent(List members) {
   setState(() {
     for (final member in members) {
