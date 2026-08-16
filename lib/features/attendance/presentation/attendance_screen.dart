@@ -38,6 +38,7 @@ class _AttendanceScreenState
 
   late Future<List<Group>> _groupsFuture;
   List<Member> _members = [];
+  final Set<String> _temporaryMemberIds = {};
 
   @override
   void initState() {
@@ -295,24 +296,34 @@ return PopScope(
             );
           }
 
-          final data = snapshot.data!;
+final data = snapshot.data!;
+
 if (_members.isEmpty) {
   _members = List<Member>.from(data.members);
 }
 
+// Reconstitution des adhérents ponctuels après
+// fermeture puis réouverture de la séance.
+_temporaryMemberIds.addAll(
+  data.temporaryMemberIds,
+);
 final members = _members;
-          if (_attendance.isEmpty) {
-            for (final member in members) {
-              final status =
-                  data.attendances[member.id];
+if (_attendance.isEmpty) {
+  for (final member in members) {
+    final status =
+        data.attendances[member.id];
 
-              _attendance[member.id] =
-                  status ??
-                      AttendanceStatus.absent;
-            }
-          }
+    _attendance[member.id] =
+        status ??
+            AttendanceStatus.absent;
+  }
+}
 
-          if (members.isEmpty) {
+
+_members.sort(
+  (a, b) =>
+      a.lastName.compareTo(b.lastName),
+);          if (members.isEmpty) {
             return const Center(
               child: Text(
                 'Aucun adhérent inscrit',
@@ -365,32 +376,47 @@ Padding(
         CrossAxisAlignment.stretch,
     children: [
       Text(
-        '${members.length} adhérents',
-        style: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+  'Résumé de l\'appel — ${members.length} adhérents',
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
 
 const SizedBox(height: 6),
 
 _buildAttendanceStatus(),
 
       Wrap(
-        spacing: 14,
-        runSpacing: 4,
-        children: [
-          Text(
-            '🟢 ${statusCounts[AttendanceStatus.present] ?? 0}',
-          ),
-          Text(
-            '🔴 ${statusCounts[AttendanceStatus.absent] ?? 0}',
-          ),
-          Text(
-            '🟠 ${statusCounts[AttendanceStatus.excused] ?? 0}',
-          ),
-        ],
-      ),
+  spacing: 14,
+  runSpacing: 4,
+  children: [
+    Text(
+      '🟢 Présents : '
+      '${statusCounts[AttendanceStatus.present] ?? 0}',
+    ),
+    Text(
+      '🔴 Absents : '
+      '${statusCounts[AttendanceStatus.absent] ?? 0}',
+    ),
+    Text(
+      '🟠 Excusés : '
+      '${statusCounts[AttendanceStatus.excused] ?? 0}',
+    ),
+    Text(
+      '🔵 Rattrapage : '
+      '${statusCounts[AttendanceStatus.makeup] ?? 0}',
+    ),
+    Text(
+      '🟣 Essais : '
+      '${statusCounts[AttendanceStatus.trial] ?? 0}',
+    ),
+    Text(
+      '🟦 Invités : '
+      '${statusCounts[AttendanceStatus.guest] ?? 0}',
+    ),
+  ],
+),
 
       const SizedBox(height: 12),
 
@@ -506,16 +532,42 @@ const Divider(height: 1),
                                         CrossAxisAlignment
                                             .start,
                                     children: [
-                                      Text(
-                                        member.fullName,
-                                        style:
-                                            const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight:
-                                              FontWeight
-                                                  .w600,
-                                        ),
-                                      ),
+                                      Row(
+  children: [
+    Expanded(
+      child: Text(
+        member.fullName,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+
+    if (_temporaryMemberIds.contains(
+      member.id,
+    ))
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 3,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade100,
+          borderRadius:
+              BorderRadius.circular(12),
+        ),
+        child: const Text(
+          'Ponctuel',
+          style: TextStyle(
+            color: Colors.blue,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+  ],
+),
                                       const SizedBox(
                                         height: 3,
                                       ),
@@ -852,6 +904,10 @@ setState(() {
   _attendance[selectedMember.id] =
       AttendanceStatus.makeup;
 
+  _temporaryMemberIds.add(
+    selectedMember.id,
+  );
+
   _hasUnsavedChanges = true;
 });}
 
@@ -865,11 +921,14 @@ Future<void> _loadAttendances() async {
     return;
   }
 
-  setState(() {
-    _attendance.addAll(saved);
-    _hasSavedAttendance = saved.isNotEmpty;
-    _hasUnsavedChanges = false;
-  });
+setState(() {
+  _attendance
+    ..clear()
+    ..addAll(saved);
+
+  _hasSavedAttendance = saved.isNotEmpty;
+  _hasUnsavedChanges = false;
+});
 }
 void _markAllPresent(List members) {
   setState(() {
@@ -933,4 +992,5 @@ void _markAllAbsent(List members) {
 
     _hasUnsavedChanges = true;
   });
-}}
+}
+}

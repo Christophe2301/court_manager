@@ -118,61 +118,67 @@ Future<List<Member>> getActiveMembers() async {
     await batch.commit();
   }
 
-  Future<AttendanceScreenData>
-      getAttendanceScreenData(
-    String sessionId,
-    String groupId,
-  ) async {
-final members =
-    await getMembersByGroup(groupId);
+Future<AttendanceScreenData>
+    getAttendanceScreenData(
+  String sessionId,
+  String groupId,
+) async {
+  final members =
+      await getMembersByGroup(groupId);
 
-final attendances =
-    await getAttendancesBySession(
-  sessionId,
-);
+  final attendances =
+      await getAttendancesBySession(
+    sessionId,
+  );
 
-final availableMembers =
-    await getActiveMembers();
-    // --------------------------------------------------
-    // Ajout des adhérents ponctuels
-    // --------------------------------------------------
+  final availableMembers =
+      await getActiveMembers();
 
-    final memberIds =
-        members.map((member) => member.id).toSet();
+  // --------------------------------------------------
+  // Identification des adhérents ponctuels
+  // --------------------------------------------------
 
-    final temporaryMemberIds =
-        attendances.keys
-            .where(
-              (memberId) =>
-                  !memberIds.contains(memberId),
-            )
-            .toList();
+  final regularMemberIds =
+      members.map((member) => member.id).toSet();
 
-    for (final memberId in temporaryMemberIds) {
-      final memberDoc = await _firestore
-          .collection('members')
-          .doc(memberId)
-          .get();
+  final temporaryMemberIds =
+      attendances.keys
+          .where(
+            (memberId) =>
+                !regularMemberIds.contains(memberId),
+          )
+          .toSet();
 
-      if (memberDoc.exists) {
-        members.add(
-          Member.fromFirestore(memberDoc),
-        );
-      }
+  // --------------------------------------------------
+  // Ajout des adhérents ponctuels à la liste des membres
+  // --------------------------------------------------
+
+  for (final memberId in temporaryMemberIds) {
+    final memberDoc = await _firestore
+        .collection('members')
+        .doc(memberId)
+        .get();
+
+    if (memberDoc.exists) {
+      members.add(
+        Member.fromFirestore(memberDoc),
+      );
     }
+  }
 
-    // On conserve le classement alphabétique.
-    members.sort(
-      (a, b) =>
-          a.lastName.compareTo(b.lastName),
-    );
+  // On conserve le classement alphabétique.
+  members.sort(
+    (a, b) =>
+        a.lastName.compareTo(b.lastName),
+  );
 
-return AttendanceScreenData(
-  members: members,
-  attendances: attendances,
-  availableMembers: availableMembers,
-);  }
-
+  return AttendanceScreenData(
+    members: members,
+    attendances: attendances,
+    availableMembers: availableMembers,
+    temporaryMemberIds: temporaryMemberIds,
+  );
+}
   Future<Map<String, AttendanceStatus>>
       getAttendancesBySession(
     String sessionId,
@@ -198,4 +204,19 @@ return AttendanceScreenData(
 
     return result;
   }
+Future<Member?> getMemberById(
+  String memberId,
+) async {
+  final doc = await _firestore
+      .collection('members')
+      .doc(memberId)
+      .get();
+
+  if (!doc.exists) {
+    return null;
+  }
+
+  return Member.fromFirestore(doc);
+}
+
 }
