@@ -6,6 +6,7 @@ import '../../../core/models/group.dart';
 import '../data/attendance_repository.dart';
 import '../models/attendance_screen_data.dart';
 import '../../../core/models/attendance.dart';
+import '../../../core/models/member.dart';
 import '../widgets/attendance_status_chip.dart';
 import '../../groups/data/group_repository.dart';
 
@@ -36,6 +37,7 @@ class _AttendanceScreenState
   bool _hasUnsavedChanges = false;
 
   late Future<List<Group>> _groupsFuture;
+  List<Member> _members = [];
 
   @override
   void initState() {
@@ -294,8 +296,11 @@ return PopScope(
           }
 
           final data = snapshot.data!;
-          final members = data.members;
+if (_members.isEmpty) {
+  _members = List<Member>.from(data.members);
+}
 
+final members = _members;
           if (_attendance.isEmpty) {
             for (final member in members) {
               final status =
@@ -420,6 +425,24 @@ _buildAttendanceStatus(),
 },
         ),
       ),
+      const SizedBox(height: 8),
+
+SizedBox(
+  width: double.infinity,
+  child: OutlinedButton.icon(
+    icon: const Icon(
+      Icons.person_add,
+    ),
+    label: const Text(
+      'Ajouter un adhérent',
+    ),
+    onPressed: () {
+      _addMember(
+        data.availableMembers,
+      );
+    },
+  ),
+),
     ],
   ),
 ),
@@ -676,6 +699,161 @@ Future<bool> _confirmLeave() async {
   return shouldLeave ?? false;
 }
 
+Future<void> _addMember(List<Member> availableMembers) async {
+  final alreadyPresentIds =
+      _attendance.keys.toSet();
+
+  final candidates = availableMembers
+      .where(
+        (member) =>
+            !alreadyPresentIds.contains(member.id),
+      )
+      .toList();
+
+  if (candidates.isEmpty) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Tous les adhérents sont déjà présents dans cet appel.',
+        ),
+      ),
+    );
+
+    return;
+  }
+
+  final selectedMember =
+      await showDialog<Member>(
+    context: context,
+    builder: (dialogContext) {
+      String search = '';
+
+      return StatefulBuilder(
+        builder: (
+          context,
+          setDialogState,
+        ) {
+          final filteredMembers = candidates
+              .where(
+                (member) {
+                  final text =
+                      '${member.firstName} '
+                      '${member.lastName} '
+                      '${member.licenseNumber}'
+                          .toLowerCase();
+
+                  return text.contains(
+                    search.toLowerCase(),
+                  );
+                },
+              )
+              .toList();
+
+          return AlertDialog(
+            title: const Text(
+              'Ajouter un adhérent',
+            ),
+            content: SizedBox(
+              width: 450,
+              height: 400,
+              child: Column(
+                children: [
+                  TextField(
+                    autofocus: true,
+                    decoration:
+                        const InputDecoration(
+                      labelText: 'Rechercher',
+                      hintText:
+                          'Nom, prénom ou licence',
+                      prefixIcon:
+                          Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        search = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: filteredMembers.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Aucun adhérent trouvé',
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount:
+                                filteredMembers.length,
+                            itemBuilder:
+                                (context, index) {
+                              final member =
+                                  filteredMembers[
+                                      index];
+
+                              return ListTile(
+                                leading:
+                                    const CircleAvatar(
+                                  child: Icon(
+                                    Icons.person,
+                                  ),
+                                ),
+                                title: Text(
+                                  member.fullName,
+                                ),
+                                subtitle: Text(
+                                  'Licence : '
+                                  '${member.licenseNumber}',
+                                ),
+                                onTap: () {
+                                  Navigator.of(
+                                    dialogContext,
+                                  ).pop(member);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(
+                    dialogContext,
+                  ).pop();
+                },
+                child: const Text('Annuler'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  if (selectedMember == null) {
+    return;
+  }
+
+setState(() {
+  _members.add(selectedMember);
+
+  _members.sort(
+    (a, b) =>
+        a.lastName.compareTo(b.lastName),
+  );
+
+  _attendance[selectedMember.id] =
+      AttendanceStatus.makeup;
+
+  _hasUnsavedChanges = true;
+});}
 
 Future<void> _loadAttendances() async {
   final saved =

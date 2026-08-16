@@ -5,205 +5,197 @@ import '../../../core/models/attendance.dart';
 import '../models/attendance_screen_data.dart';
 
 class AttendanceRepository {
-
   final FirebaseFirestore _firestore;
-
 
   AttendanceRepository({
     FirebaseFirestore? firestore,
   }) : _firestore =
-          firestore ?? FirebaseFirestore.instance;
-
-
+            firestore ?? FirebaseFirestore.instance;
 
   Future<List<Member>> getMembersByGroup(
     String groupId,
   ) async {
-
-    final enrollments =
-        await _firestore
-            .collection('enrollments')
-            .where(
-              'groupId',
-              isEqualTo: groupId,
-            )
-            .where(
-              'isActive',
-              isEqualTo: true,
-            )
-            .get();
-
+    final enrollments = await _firestore
+        .collection('enrollments')
+        .where(
+          'groupId',
+          isEqualTo: groupId,
+        )
+        .where(
+          'isActive',
+          isEqualTo: true,
+        )
+        .get();
 
     final members = <Member>[];
 
-
     for (final enrollment in enrollments.docs) {
-
       final memberId =
           enrollment.data()['memberId'];
 
-
-      final memberDoc =
-          await _firestore
-              .collection('members')
-              .doc(memberId)
-              .get();
-
+      final memberDoc = await _firestore
+          .collection('members')
+          .doc(memberId)
+          .get();
 
       if (memberDoc.exists) {
-
         members.add(
-          Member.fromFirestore(
-            memberDoc,
-          ),
+          Member.fromFirestore(memberDoc),
         );
       }
     }
 
-
     members.sort(
       (a, b) =>
-          a.lastName.compareTo(
-            b.lastName,
-          ),
+          a.lastName.compareTo(b.lastName),
     );
-
 
     return members;
   }
 
+Future<List<Member>> getActiveMembers() async {
+  final snapshot = await _firestore
+      .collection('members')
+      .where(
+        'isActive',
+        isEqualTo: true,
+      )
+      .get();
 
+  final members = snapshot.docs
+      .map(
+        (doc) => Member.fromFirestore(doc),
+      )
+      .toList();
 
+  members.sort(
+    (a, b) =>
+        a.lastName.compareTo(b.lastName),
+  );
+
+  return members;
+}
 
   Future<void> saveAttendances({
-
     required String sessionId,
-
     required Map<String, AttendanceStatus> attendance,
-
     required String userId,
-
   }) async {
+    final batch = _firestore.batch();
 
-
-    final batch =
-        _firestore.batch();
-
-
-    final now =
-        DateTime.now();
-
+    final now = DateTime.now();
 
     attendance.forEach(
       (memberId, status) {
+        final docId =
+            '${sessionId}_$memberId';
 
-       final docId =
-    '${sessionId}_$memberId';
+        final doc = _firestore
+            .collection('attendance')
+            .doc(docId);
 
-
-final doc =
-    _firestore
-        .collection('attendance')
-        .doc(docId);
-
-
-        final record =
-            Attendance(
-
-              id: doc.id,
-
-              sessionId:
-                  sessionId,
-
-              memberId:
-                  memberId,
-
-              status: status,
-
-              comment:
-                  null,
-
-              checkedAt:
-                  now,
-
-              createdAt:
-                  now,
-
-              updatedAt:
-                  now,
-
-              createdBy:
-                  userId,
-
-              updatedBy:
-                  userId,
-            );
-
+        final record = Attendance(
+          id: doc.id,
+          sessionId: sessionId,
+          memberId: memberId,
+          status: status,
+          comment: null,
+          checkedAt: now,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: userId,
+          updatedBy: userId,
+        );
 
         batch.set(
-  doc,
-  record.toFirestore(),
-  SetOptions(
-    merge: true,
-  ),
-);
+          doc,
+          record.toFirestore(),
+          SetOptions(merge: true),
+        );
       },
     );
-
 
     await batch.commit();
   }
 
-Future<AttendanceScreenData> getAttendanceScreenData(
-  String sessionId,
-  String groupId,
-) async {
+  Future<AttendanceScreenData>
+      getAttendanceScreenData(
+    String sessionId,
+    String groupId,
+  ) async {
+final members =
+    await getMembersByGroup(groupId);
 
-  final membersFuture =
-      getMembersByGroup(groupId);
+final attendances =
+    await getAttendancesBySession(
+  sessionId,
+);
 
-  final attendancesFuture =
-      getAttendancesBySession(sessionId);
+final availableMembers =
+    await getActiveMembers();
+    // --------------------------------------------------
+    // Ajout des adhérents ponctuels
+    // --------------------------------------------------
 
-  final members =
-      await membersFuture;
+    final memberIds =
+        members.map((member) => member.id).toSet();
 
-  final attendances =
-      await attendancesFuture;
+    final temporaryMemberIds =
+        attendances.keys
+            .where(
+              (memberId) =>
+                  !memberIds.contains(memberId),
+            )
+            .toList();
 
-  return AttendanceScreenData(
-    members: members,
-    attendances: attendances,
-  );
-}
-Future<Map<String, AttendanceStatus>> getAttendancesBySession(
-  String sessionId,
-) async {
+    for (final memberId in temporaryMemberIds) {
+      final memberDoc = await _firestore
+          .collection('members')
+          .doc(memberId)
+          .get();
 
-  final snapshot = await _firestore
-      .collection('attendance')
-      .where(
-        'sessionId',
-        isEqualTo: sessionId,
-      )
-      .get();
+      if (memberDoc.exists) {
+        members.add(
+          Member.fromFirestore(memberDoc),
+        );
+      }
+    }
 
+    // On conserve le classement alphabétique.
+    members.sort(
+      (a, b) =>
+          a.lastName.compareTo(b.lastName),
+    );
 
-  final result =
-      <String, AttendanceStatus>{};
+return AttendanceScreenData(
+  members: members,
+  attendances: attendances,
+  availableMembers: availableMembers,
+);  }
 
+  Future<Map<String, AttendanceStatus>>
+      getAttendancesBySession(
+    String sessionId,
+  ) async {
+    final snapshot = await _firestore
+        .collection('attendance')
+        .where(
+          'sessionId',
+          isEqualTo: sessionId,
+        )
+        .get();
 
-  for (final doc in snapshot.docs) {
+    final result =
+        <String, AttendanceStatus>{};
 
-    final attendance =
-        Attendance.fromFirestore(doc);
+    for (final doc in snapshot.docs) {
+      final attendance =
+          Attendance.fromFirestore(doc);
 
+      result[attendance.memberId] =
+          attendance.status;
+    }
 
-    result[attendance.memberId] =
-        attendance.status;
+    return result;
   }
-
-
-  return result;
-}
 }
