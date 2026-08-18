@@ -58,4 +58,100 @@ class MemberRepository {
           },
         );
   }
+Stream<List<Member>> watchActiveMembers() {
+  return _firestore
+      .collection('members')
+      .where('isActive', isEqualTo: true)
+      .orderBy('lastName')
+      .orderBy('firstName')
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Member.fromFirestore(doc),
+            )
+            .toList(),
+      );
+}
+
+Future<bool> licenseNumberExists(
+  String licenseNumber, {
+  String? excludeMemberId,
+}) async {
+  final snapshot = await _firestore
+      .collection('members')
+      .where(
+        'licenseNumber',
+        isEqualTo: licenseNumber.trim(),
+      )
+      .limit(10)
+      .get();
+
+  for (final doc in snapshot.docs) {
+    if (doc.id != excludeMemberId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+Future<void> createMember(
+  Member member,
+) async {
+  await _firestore
+      .collection('members')
+      .doc(member.id)
+      .set(
+        member.toFirestore(),
+      );
+}
+
+String newMemberId() {
+  return _firestore
+      .collection('members')
+      .doc()
+      .id;
+}
+
+Future<void> updateMember(
+  Member member,
+) async {
+  await _firestore
+      .collection('members')
+      .doc(member.id)
+      .update({
+    'licenseNumber': member.licenseNumber,
+    'firstName': member.firstName,
+    'lastName': member.lastName,
+    'birthDate': member.birthDate != null
+        ? Timestamp.fromDate(member.birthDate!)
+        : null,
+    'email': member.email,
+    'phone': member.phone,
+    'isActive': member.isActive,
+    'notes': member.notes,
+    'updatedAt': Timestamp.fromDate(
+      member.updatedAt,
+    ),
+    'updatedBy': member.updatedBy,
+  });
+}
+
+Future<void> deactivateMember(
+  String memberId,
+  String updatedBy,
+) async {
+  await _firestore
+      .collection('members')
+      .doc(memberId)
+      .update({
+    'isActive': false,
+    'updatedAt': Timestamp.fromDate(
+      DateTime.now(),
+    ),
+    'updatedBy': updatedBy,
+  });
+}
+
 }

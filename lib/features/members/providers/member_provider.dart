@@ -22,3 +22,11 @@ final groupMembersProvider =
     );
   },
 );
+
+final activeMembersProvider =
+    StreamProvider<List<Member>>((ref) {
+  final repository =
+      ref.watch(memberRepositoryProvider);
+
+  return repository.watchActiveMembers();
+});

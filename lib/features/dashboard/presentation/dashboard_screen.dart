@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/models/app_user.dart';
-
+import '../../admin/presentation/administration_screen.dart';
 import '../../groups/presentation/group_detail_screen.dart';
 import '../../groups/providers/group_provider.dart';
 import '../../attendance/presentation/sessions_page.dart';
@@ -102,6 +102,29 @@ class DashboardScreen extends ConsumerWidget {
 
             const SizedBox(height: 20),
 
+if (user.isAdmin) ...[
+  SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      icon: const Icon(
+        Icons.admin_panel_settings,
+      ),
+      label: const Text(
+        'Administration',
+      ),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                const AdministrationScreen(),
+          ),
+        );
+      },
+    ),
+  ),
+  const SizedBox(height: 20),
+],
 
             const Text(
               "Aujourd'hui",
