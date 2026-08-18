@@ -15,3 +15,12 @@ final activeTeachersProvider =
 
   return repository.watchActiveTeachers();
 });
+
+final inactiveTeachersProvider =
+    StreamProvider<List<AppUser>>((ref) {
+  final repository =
+      ref.watch(teacherRepositoryProvider);
+
+  return repository.watchInactiveTeachers();
+});
+

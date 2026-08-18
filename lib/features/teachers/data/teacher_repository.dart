@@ -89,4 +89,64 @@ Future<AppUser?> getTeacher(
   );
 }
 
+Future<void> deactivateTeacher({
+  required String uid,
+  required String updatedBy,
+}) async {
+  await _firestore
+      .collection('users')
+      .doc(uid)
+      .update({
+    'active': false,
+    'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': updatedBy,
+  });
+}
+
+Stream<List<AppUser>> watchInactiveTeachers() {
+  return _firestore
+      .collection('users')
+      .where(
+        'role',
+        isEqualTo: 'teacher',
+      )
+      .where(
+        'active',
+        isEqualTo: false,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => AppUser(
+                uid: doc.id,
+                firstName:
+                    doc.data()['firstName'] ?? '',
+                lastName:
+                    doc.data()['lastName'] ?? '',
+                email:
+                    doc.data()['email'] ?? '',
+                role: AppUserRole.teacher,
+                active:
+                    doc.data()['active'] ?? false,
+              ),
+            )
+            .toList(),
+      );
+}
+
+Future<void> reactivateTeacher({
+  required String uid,
+  required String updatedBy,
+}) async {
+  await _firestore
+      .collection('users')
+      .doc(uid)
+      .update({
+    'active': true,
+    'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': updatedBy,
+  });
+}
+
 }

@@ -5,22 +5,50 @@ import '../../auth/models/app_user.dart';
 import '../providers/teacher_provider.dart';
 import 'teacher_detail_screen.dart';
 
-class TeachersScreen extends ConsumerWidget {
+class TeachersScreen extends ConsumerStatefulWidget {
   const TeachersScreen({
     super.key,
   });
 
   @override
-  Widget build(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
-    final teachers =
-        ref.watch(activeTeachersProvider);
+  ConsumerState<TeachersScreen> createState() =>
+      _TeachersScreenState();
+}
+
+class _TeachersScreenState
+    extends ConsumerState<TeachersScreen> {
+  bool _showInactive = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final teachers = _showInactive
+        ? ref.watch(inactiveTeachersProvider)
+        : ref.watch(activeTeachersProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Professeurs'),
+        title: Text(
+          _showInactive
+              ? 'Professeurs inactifs'
+              : 'Professeurs',
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _showInactive
+                  ? Icons.visibility
+                  : Icons.visibility_off,
+            ),
+            tooltip: _showInactive
+                ? 'Afficher les actifs'
+                : 'Afficher les inactifs',
+            onPressed: () {
+              setState(() {
+                _showInactive = !_showInactive;
+              });
+            },
+          ),
+        ],
       ),
       body: teachers.when(
         loading: () => const Center(
@@ -38,9 +66,11 @@ class TeachersScreen extends ConsumerWidget {
 
         data: (teachers) {
           if (teachers.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'Aucun professeur actif',
+                _showInactive
+                    ? 'Aucun professeur inactif'
+                    : 'Aucun professeur actif',
               ),
             );
           }
@@ -54,8 +84,12 @@ class TeachersScreen extends ConsumerWidget {
 
               return Card(
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.person),
+                  leading: CircleAvatar(
+                    child: Icon(
+                      teacher.active
+                          ? Icons.person
+                          : Icons.person_off,
+                    ),
                   ),
                   title: Text(
                     teacher.fullName,
@@ -66,8 +100,8 @@ class TeachersScreen extends ConsumerWidget {
                   trailing: const Icon(
                     Icons.chevron_right,
                   ),
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) =>

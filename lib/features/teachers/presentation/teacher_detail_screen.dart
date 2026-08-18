@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../auth/models/app_user.dart';
 import '../data/teacher_repository.dart';
@@ -27,6 +28,89 @@ class _TeacherDetailScreenState
 
     _teacher = widget.teacher;
   }
+
+Future<void> _confirmDeactivation() async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Désactiver le professeur ?',
+        ),
+        content: Text(
+          'Le professeur ${_teacher.fullName} '
+          'ne sera plus affiché dans la liste '
+          'des professeurs actifs.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text('Désactiver'),
+          ),
+        ],
+      );
+    },
+  );
+
+if (confirmed != true) {
+  return;
+}
+
+final currentUser =
+    FirebaseAuth.instance.currentUser;
+
+if (currentUser == null) {
+  if (!mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Utilisateur non connecté',
+      ),
+    ),
+  );
+
+  return;
+}
+
+try {
+  final repository =
+      TeacherRepository();
+
+  await repository.deactivateTeacher(
+    uid: _teacher.uid,
+    updatedBy: currentUser.uid,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  Navigator.pop(context, true);
+} catch (error) {
+  if (!mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Erreur lors de la désactivation : $error',
+      ),
+    ),
+  );
+}
+}
 
   Future<void> _editTeacher() async {
     final updated = await Navigator.push<bool>(
@@ -71,21 +155,34 @@ appBar: AppBar(
       tooltip: 'Modifier',
       onPressed: _editTeacher,
     ),
-    PopupMenuButton<String>(
-      onSelected: (value) {
-        if (value == 'deactivate') {
-          // Désactivation à ajouter à l'étape suivante.
-        }
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem<String>(
-          value: 'deactivate',
-          child: Text(
-            'Désactiver le professeur',
-          ),
+PopupMenuButton<String>(
+  onSelected: (value) {
+    if (value == 'deactivate') {
+      _confirmDeactivation();
+    }
+
+    if (value == 'reactivate') {
+      _confirmReactivation();
+    }
+  },
+  itemBuilder: (context) => [
+    if (_teacher.active)
+      const PopupMenuItem<String>(
+        value: 'deactivate',
+        child: Text(
+          'Désactiver le professeur',
         ),
-      ],
-    ),
+      ),
+
+    if (!_teacher.active)
+      const PopupMenuItem<String>(
+        value: 'reactivate',
+        child: Text(
+          'Réactiver le professeur',
+        ),
+      ),
+  ],
+),
   ],
 ),
       body: ListView(
@@ -140,6 +237,88 @@ appBar: AppBar(
       ),
     );
   }
+
+  Future<void> _confirmReactivation() async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Réactiver le professeur ?',
+        ),
+        content: Text(
+          'Le professeur ${_teacher.fullName} '
+          'sera de nouveau considéré comme actif.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, false);
+            },
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context, true);
+            },
+            child: const Text('Réactiver'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final currentUser =
+      FirebaseAuth.instance.currentUser;
+
+  if (currentUser == null) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Utilisateur non connecté',
+        ),
+      ),
+    );
+
+    return;
+  }
+
+  try {
+    final repository =
+        TeacherRepository();
+
+    await repository.reactivateTeacher(
+      uid: _teacher.uid,
+      updatedBy: currentUser.uid,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pop(context, true);
+  } catch (error) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur lors de la réactivation : $error',
+        ),
+      ),
+    );
+  }
+}
 }
 
 class _InfoSection extends StatelessWidget {
