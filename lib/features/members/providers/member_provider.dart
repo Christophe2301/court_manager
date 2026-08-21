@@ -29,4 +29,13 @@ final activeMembersProvider =
       ref.watch(memberRepositoryProvider);
 
   return repository.watchActiveMembers();
+  
+});
+
+final inactiveMembersProvider =
+    StreamProvider<List<Member>>((ref) {
+  final repository =
+      ref.watch(memberRepositoryProvider);
+
+  return repository.watchInactiveMembers();
 });

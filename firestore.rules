@@ -1,0 +1,184 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // Fonctions communes
+    // ============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isActiveUser() {
+      return isAuthenticated()
+          && get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.active == true;
+    }
+
+    function isAdmin() {
+      return isActiveUser()
+          && get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.role == 'admin';
+    }
+
+    function isTeacher() {
+      return isActiveUser()
+          && get(
+            /databases/$(database)/documents/users/$(request.auth.uid)
+          ).data.role == 'teacher';
+    }
+
+    // ============================================================
+    // USERS
+    // ============================================================
+
+    match /users/{userId} {
+
+      // Administrateur : lecture complète.
+      allow read: if isAdmin();
+
+      // Professeur :
+      // peut consulter les profils des professeurs actifs.
+      // Ces informations sont nécessaires notamment pour
+      // gérer les séances assurées par plusieurs professeurs.
+      allow read: if isTeacher()
+                  && resource.data.role == 'teacher'
+                  && resource.data.active == true;
+
+      // Seul l'administrateur peut modifier les utilisateurs.
+      allow write: if isAdmin();
+    }
+    
+    // ============================================================
+    // TEACHERS
+    // ============================================================
+
+    match /teachers/{teacherId} {
+
+      allow read: if isAdmin() || isTeacher();
+
+      allow write: if isAdmin();
+    }
+
+    // ============================================================
+    // MEMBERS
+    // ============================================================
+
+    match /members/{memberId} {
+
+      // Administrateur : lecture / écriture
+      // Professeur : lecture
+      allow read: if isAdmin() || isTeacher();
+
+      allow write: if isAdmin();
+    }
+
+    // ============================================================
+    // GROUPS
+    // ============================================================
+
+    match /groups/{groupId} {
+
+      // Administrateur et professeurs peuvent consulter
+      // les groupes.
+      allow read: if isAdmin() || isTeacher();
+
+      // Seul l'administrateur peut créer/modifier/désactiver
+      // les groupes.
+      allow write: if isAdmin();
+    }
+
+    // ============================================================
+    // ENROLLMENTS
+    // ============================================================
+
+    match /enrollments/{enrollmentId} {
+
+      // Administrateur et professeurs peuvent consulter
+      // les inscriptions.
+      allow read: if isAdmin() || isTeacher();
+
+      // Gestion des inscriptions réservée à l'administrateur.
+      allow write: if isAdmin();
+    }
+
+    // ============================================================
+    // SESSIONS
+    // ============================================================
+
+    match /sessions/{sessionId} {
+
+      // Administrateur : accès complet.
+      allow read, write: if isAdmin();
+
+      // Professeur :
+      // - peut lire les séances auxquelles il est affecté
+      // - peut modifier uniquement une séance dont il est
+      //   l'un des professeurs.
+      allow read: if isTeacher()
+                  && request.auth.uid in resource.data.teacherIds;
+
+      allow update: if isTeacher()
+                    && request.auth.uid in resource.data.teacherIds
+                    && request.auth.uid in request.resource.data.teacherIds;
+
+      allow create: if isTeacher()
+                    && request.auth.uid in request.resource.data.teacherIds;
+
+      allow delete: if isTeacher()
+                    && request.auth.uid in resource.data.teacherIds;
+    }
+
+    // ============================================================
+    // ATTENDANCE
+    // ============================================================
+
+    match /attendance/{attendanceId} {
+
+      // Administrateur : accès complet.
+      allow read, write: if isAdmin();
+
+      // ----------------------------------------------------------
+      // Professeur : lecture d'une présence
+      // ----------------------------------------------------------
+      allow read: if isTeacher()
+        && exists(
+          /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+        )
+        && request.auth.uid in get(
+          /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+        ).data.teacherIds;
+
+      // ----------------------------------------------------------
+      // Professeur : création d'une présence
+      // ----------------------------------------------------------
+      allow create: if isTeacher()
+        && exists(
+          /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
+        )
+        && request.auth.uid in get(
+          /databases/$(database)/documents/sessions/$(request.resource.data.sessionId)
+        ).data.teacherIds;
+
+      // ----------------------------------------------------------
+      // Professeur : modification d'une présence existante
+      // ----------------------------------------------------------
+      allow update: if isTeacher()
+        && exists(
+          /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+        )
+        && request.auth.uid in get(
+          /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+        ).data.teacherIds;
+
+      // ----------------------------------------------------------
+      // Suppression : réservée à l'administrateur
+      // ----------------------------------------------------------
+      allow delete: if isAdmin();
+    }
+  }
+}

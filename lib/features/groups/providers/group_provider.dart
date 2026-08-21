@@ -19,6 +19,13 @@ final activeGroupsProvider =
   return repository.watchActiveGroups();
 });
 
+final inactiveGroupsProvider =
+    StreamProvider<List<Group>>((ref) {
+  final repository =
+      ref.watch(groupRepositoryProvider);
+
+  return repository.watchInactiveGroups();
+});
 
 final teacherGroupsProvider =
     StreamProvider.family<List<Group>, String>(

@@ -25,6 +25,22 @@ class GroupRepository {
         );
   }
 
+Stream<List<Group>> watchInactiveGroups() {
+  return _firestore
+      .collection('groups')
+      .where(
+        'isActive',
+        isEqualTo: false,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Group.fromFirestore(doc),
+            )
+            .toList(),
+      );
+}
 
   Stream<List<Group>> watchGroupsForTeacher(
     String teacherId,
@@ -54,4 +70,55 @@ class GroupRepository {
           group.toFirestore(),
         );
   }
+
+Future<void> updateGroup(Group group) async {
+  await _firestore
+      .collection('groups')
+      .doc(group.id)
+      .update(
+    group.toFirestore(),
+  );
+}
+
+Future<void> deactivateGroup({
+  required String groupId,
+  required String updatedBy,
+}) async {
+  await _firestore
+      .collection('groups')
+      .doc(groupId)
+      .update({
+    'isActive': false,
+    'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': updatedBy,
+  });
+}
+
+Future<void> reactivateGroup({
+  required String groupId,
+  required String updatedBy,
+}) async {
+  await _firestore
+      .collection('groups')
+      .doc(groupId)
+      .update({
+    'isActive': true,
+    'updatedAt': FieldValue.serverTimestamp(),
+    'updatedBy': updatedBy,
+  });
+}
+
+Future<Group?> getGroup(String groupId) async {
+  final doc = await _firestore
+      .collection('groups')
+      .doc(groupId)
+      .get();
+
+  if (!doc.exists) {
+    return null;
+  }
+
+  return Group.fromFirestore(doc);
+}
+
 }

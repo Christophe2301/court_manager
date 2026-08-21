@@ -5,6 +5,7 @@ import '../../../core/models/session_model.dart';
 import '../../../core/models/group.dart';
 import '../../groups/data/group_repository.dart';
 import 'attendance_screen.dart';
+import 'session_edit_screen.dart';
 
 class SessionsPage extends StatefulWidget {
   final String teacherId;
@@ -19,8 +20,7 @@ class SessionsPage extends StatefulWidget {
       _SessionsPageState();
 }
 
-class _SessionsPageState
-    extends State<SessionsPage> {
+class _SessionsPageState extends State<SessionsPage> {
   final SessionRepository _sessionRepository =
       SessionRepository();
 
@@ -34,6 +34,10 @@ class _SessionsPageState
   void initState() {
     super.initState();
 
+    _loadData();
+  }
+
+  void _loadData() {
     _sessionsFuture =
         _sessionRepository.getSessionsByTeacher(
       widget.teacherId,
@@ -43,6 +47,14 @@ class _SessionsPageState
         _groupRepository
             .watchGroupsForTeacher(widget.teacherId)
             .first;
+  }
+
+  Future<void> _refreshSessions() async {
+    setState(() {
+      _loadData();
+    });
+
+    await _sessionsFuture;
   }
 
   String _formatDate(DateTime date) {
@@ -141,6 +153,122 @@ class _SessionsPageState
     );
   }
 
+Future<void> _cancelSession(
+  BuildContext context,
+  SessionModel session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Annuler la séance ?'),
+        content: const Text(
+          'Cette séance sera marquée comme annulée. '
+          'Voulez-vous continuer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text('Annuler la séance'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  try {
+    final cancelledSession = SessionModel(
+      id: session.id,
+      groupId: session.groupId,
+      teacherIds: session.teacherIds,
+      date: session.date,
+      startTime: session.startTime,
+      durationMinutes: session.durationMinutes,
+      status: 'cancelled',
+    );
+
+    await _sessionRepository.updateSession(
+      cancelledSession,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await _refreshSessions();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('La séance a été annulée.'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur lors de l’annulation : $error',
+        ),
+      ),
+    );
+  }
+}
+
+  Future<void> _editSession(
+    BuildContext context,
+    SessionModel session,
+  ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            SessionEditScreen(
+          session: session,
+        ),
+      ),
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await _refreshSessions();
+  }
+
+  void _openAttendance(
+    BuildContext context,
+    SessionModel session,
+  ) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            AttendanceScreen(
+          session: session,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSessionCard(
     BuildContext context,
     SessionModel session,
@@ -165,14 +293,9 @@ class _SessionsPageState
         borderRadius:
             BorderRadius.circular(12),
         onTap: () {
-          Navigator.push(
+          _openAttendance(
             context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  AttendanceScreen(
-                session: session,
-              ),
-            ),
+            session,
           );
         },
         child: Padding(
@@ -375,10 +498,103 @@ class _SessionsPageState
                 ),
               ),
 
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
 
-              const Icon(
-                Icons.chevron_right,
+              PopupMenuButton<String>(
+                tooltip: 'Actions',
+                onSelected: (value) async {
+                  switch (value) {
+                    case 'attendance':
+                      _openAttendance(
+                        context,
+                        session,
+                      );
+                      break;
+
+                    case 'edit':
+                      await _editSession(
+                        context,
+                        session,
+                      );
+                      break;
+
+                      case 'cancel':
+      await _cancelSession(
+        context,
+        session,
+      );
+      break;
+
+      case 'complete':
+      await _completeSession(
+        context,
+        session,
+      );
+      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem<String>(
+                    value: 'attendance',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.fact_check_outlined,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Feuille de présence',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Modifier la séance',
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (session.status == 'planned')
+  const PopupMenuItem<String>(
+    value: 'complete',
+    child: Row(
+      children: [
+        Icon(
+          Icons.check_circle_outline,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Marquer comme terminée',
+        ),
+      ],
+    ),
+  ),
+
+if (session.status == 'planned')
+  const PopupMenuItem<String>(
+    value: 'cancel',
+    child: Row(
+      children: [
+        Icon(
+          Icons.cancel_outlined,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Annuler la séance',
+        ),
+      ],
+    ),
+  ),
+  
+                ],
               ),
             ],
           ),
@@ -480,61 +696,61 @@ class _SessionsPageState
                 }
               }
 
-              return ListView(
-                padding:
-                    const EdgeInsets.all(12),
-                children: [
-                  if (today.isNotEmpty) ...[
-                    _buildSectionTitle(
-                      "Aujourd'hui",
-                      Icons.today,
-                    ),
-
-                    ...today.map(
-                      (session) =>
-                          _buildSessionCard(
-                        context,
-                        session,
-                        groupsById,
-                        true,
+              return RefreshIndicator(
+                onRefresh: _refreshSessions,
+                child: ListView(
+                  padding:
+                      const EdgeInsets.all(12),
+                  children: [
+                    if (today.isNotEmpty) ...[
+                      _buildSectionTitle(
+                        "Aujourd'hui",
+                        Icons.today,
                       ),
-                    ),
-                  ],
-
-                  if (upcoming.isNotEmpty) ...[
-                    _buildSectionTitle(
-                      'À venir',
-                      Icons.event,
-                    ),
-
-                    ...upcoming.map(
-                      (session) =>
-                          _buildSessionCard(
-                        context,
-                        session,
-                        groupsById,
-                        false,
+                      ...today.map(
+                        (session) =>
+                            _buildSessionCard(
+                          context,
+                          session,
+                          groupsById,
+                          true,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
 
-                  if (past.isNotEmpty) ...[
-                    _buildSectionTitle(
-                      'Passées',
-                      Icons.history,
-                    ),
-
-                    ...past.map(
-                      (session) =>
-                          _buildSessionCard(
-                        context,
-                        session,
-                        groupsById,
-                        false,
+                    if (upcoming.isNotEmpty) ...[
+                      _buildSectionTitle(
+                        'À venir',
+                        Icons.event,
                       ),
-                    ),
+                      ...upcoming.map(
+                        (session) =>
+                            _buildSessionCard(
+                          context,
+                          session,
+                          groupsById,
+                          false,
+                        ),
+                      ),
+                    ],
+
+                    if (past.isNotEmpty) ...[
+                      _buildSectionTitle(
+                        'Passées',
+                        Icons.history,
+                      ),
+                      ...past.map(
+                        (session) =>
+                            _buildSessionCard(
+                          context,
+                          session,
+                          groupsById,
+                          false,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               );
             },
           );
@@ -542,4 +758,89 @@ class _SessionsPageState
       ),
     );
   }
+
+Future<void> _completeSession(
+  BuildContext context,
+  SessionModel session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Terminer la séance ?',
+        ),
+        content: const Text(
+          'Voulez-vous marquer cette séance '
+          'comme terminée ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text('Non'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text('Terminer'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  try {
+    final completedSession = SessionModel(
+      id: session.id,
+      groupId: session.groupId,
+      teacherIds: session.teacherIds,
+      date: session.date,
+      startTime: session.startTime,
+      durationMinutes: session.durationMinutes,
+      status: 'completed',
+    );
+
+    await _sessionRepository.updateSession(
+      completedSession,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    await _refreshSessions();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'La séance est maintenant terminée.',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur lors de la clôture de la séance : $error',
+        ),
+      ),
+    );
+  }
+}
+
 }

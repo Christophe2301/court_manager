@@ -22,3 +22,15 @@ final groupEnrollmentsProvider =
     );
   },
 );
+
+final memberEnrollmentsProvider =
+    StreamProvider.family<List<Enrollment>, String>(
+  (ref, memberId) {
+    final repository =
+        ref.watch(enrollmentRepositoryProvider);
+
+    return repository.watchEnrollmentsForMember(
+      memberId,
+    );
+  },
+);

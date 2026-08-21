@@ -154,4 +154,36 @@ Future<void> deactivateMember(
   });
 }
 
+Stream<List<Member>> watchInactiveMembers() {
+  return _firestore
+      .collection('members')
+      .where('isActive', isEqualTo: false)
+      .orderBy('lastName')
+      .orderBy('firstName')
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Member.fromFirestore(doc),
+            )
+            .toList(),
+      );
+}
+
+Future<void> reactivateMember(
+  String memberId,
+  String updatedBy,
+) async {
+  await _firestore
+      .collection('members')
+      .doc(memberId)
+      .update({
+    'isActive': true,
+    'updatedAt': Timestamp.fromDate(
+      DateTime.now(),
+    ),
+    'updatedBy': updatedBy,
+  });
+}
+
 }

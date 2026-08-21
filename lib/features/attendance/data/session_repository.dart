@@ -18,6 +18,16 @@ class SessionRepository {
     return doc.id;
   }
 
+Future<void> updateSession(
+  SessionModel session,
+) async {
+  await _firestore
+      .collection('sessions')
+      .doc(session.id)
+      .update(
+        session.toFirestore(),
+      );
+}
 
 Future<List<SessionModel>> getSessionsByTeacher(
     String teacherId) async {

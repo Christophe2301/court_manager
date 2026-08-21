@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../enrollments/providers/enrollment_provider.dart';
+import '../../groups/data/group_repository.dart';
 import '../data/member_repository.dart';
 import 'member_form_screen.dart';
 import '../../../core/models/member.dart';
+import '../../../core/models/group.dart';
 
-class MemberDetailScreen extends StatelessWidget {
+class MemberDetailScreen extends ConsumerWidget {
   final Member member;
 
   const MemberDetailScreen({
@@ -18,7 +22,7 @@ Future<void> _deactivateMember(
 ) async {
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) {
+    builder: (dialogContext) {
       return AlertDialog(
         title: const Text(
           'Désactiver l’adhérent ?',
@@ -32,13 +36,13 @@ Future<void> _deactivateMember(
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context, false);
+              Navigator.of(dialogContext).pop(false);
             },
             child: const Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context, true);
+              Navigator.of(dialogContext).pop(true);
             },
             child: const Text('Désactiver'),
           ),
@@ -60,9 +64,7 @@ Future<void> _deactivateMember(
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Utilisateur non connecté',
-        ),
+        content: Text('Utilisateur non connecté'),
       ),
     );
 
@@ -70,9 +72,7 @@ Future<void> _deactivateMember(
   }
 
   try {
-    final repository = MemberRepository();
-
-    await repository.deactivateMember(
+    await MemberRepository().deactivateMember(
       member.id,
       user.uid,
     );
@@ -81,7 +81,7 @@ Future<void> _deactivateMember(
       return;
     }
 
-    Navigator.pop(context);
+    Navigator.of(context).pop();
   } catch (error) {
     if (!context.mounted) {
       return;
@@ -97,8 +97,90 @@ Future<void> _deactivateMember(
   }
 }
 
+Future<void> _reactivateMember(
+  BuildContext context,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Réactiver l’adhérent ?',
+        ),
+        content: Text(
+          'Voulez-vous vraiment réactiver '
+          '${member.fullName} ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text('Réactiver'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Utilisateur non connecté'),
+      ),
+    );
+
+    return;
+  }
+
+  try {
+    await MemberRepository().reactivateMember(
+      member.id,
+      user.uid,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop();
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur lors de la réactivation : $error',
+        ),
+      ),
+    );
+  }
+}
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+  BuildContext context,
+  WidgetRef ref,
+)
+ {
     return Scaffold(
       appBar: AppBar(
   title: const Text('Fiche adhérent'),
@@ -107,47 +189,63 @@ actions: [
     icon: const Icon(Icons.edit),
     tooltip: 'Modifier',
     onPressed: () async {
-      final updatedMember =
-          await Navigator.push<Member>(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              MemberFormScreen(
-            member: member,
-          ),
-        ),
-      );
+  final navigator = Navigator.of(context);
 
-      if (updatedMember != null &&
-          context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                MemberDetailScreen(
-              member: updatedMember,
-            ),
-          ),
-        );
-      }
-    },
+  final updatedMember =
+      await navigator.push<Member>(
+    MaterialPageRoute(
+      builder: (context) =>
+          MemberFormScreen(
+        member: member,
+      ),
+    ),
+  );
+
+  if (!context.mounted) {
+    return;
+  }
+
+  if (updatedMember != null) {
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) =>
+            MemberDetailScreen(
+          member: updatedMember,
+        ),
+      ),
+    );
+  }
+},
   ),
 
-  PopupMenuButton<String>(
-    onSelected: (value) async {
-      if (value == 'deactivate') {
-        await _deactivateMember(context);
-      }
-    },
-    itemBuilder: (context) => [
+PopupMenuButton<String>(
+  onSelected: (value) {
+  if (value == 'deactivate') {
+    _deactivateMember(context);
+  }
+
+  if (value == 'reactivate') {
+    _reactivateMember(context);
+  }
+},
+  itemBuilder: (context) => [
+    if (member.isActive)
       const PopupMenuItem<String>(
         value: 'deactivate',
         child: Text(
-          'Désactiver l’adhérent',
+          "Désactiver l’adhérent",
         ),
       ),
-    ],
-  ),
+
+    if (!member.isActive)
+      const PopupMenuItem<String>(
+        value: 'reactivate',
+        child: Text(
+          "Réactiver l’adhérent",
+        ),
+      ),
+  ],
+),
 ],
 ),
       body: ListView(
@@ -182,6 +280,11 @@ actions: [
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+_MemberGroupsSection(
+  memberId: member.id,
+),
           const SizedBox(height: 16),
           _InfoSection(
             title: 'Coordonnées',
@@ -290,5 +393,120 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+  class _MemberGroupsSection extends ConsumerWidget {
+  final String memberId;
+
+  const _MemberGroupsSection({
+    required this.memberId,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    final enrollments =
+        ref.watch(
+      memberEnrollmentsProvider(memberId),
+    );
+
+    return _InfoSection(
+      title: 'Groupes',
+      children: [
+        enrollments.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(8),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, stack) => Text(
+            'Erreur : $error',
+          ),
+          data: (enrollments) {
+            if (enrollments.isEmpty) {
+              return const _InfoRow(
+                label: 'Inscription',
+                value: 'Aucun groupe',
+              );
+            }
+
+            return Column(
+              children: enrollments.map(
+                (enrollment) {
+                  return FutureBuilder<Group?>(
+                    future: GroupRepository()
+                        .getGroup(
+                      enrollment.groupId,
+                    ),
+                    builder: (
+                      context,
+                      snapshot,
+                    ) {
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return _InfoRow(
+                          label: 'Groupe',
+                          value:
+                              'Erreur : ${snapshot.error}',
+                        );
+                      }
+
+                      final group = snapshot.data;
+
+                      if (group == null) {
+                        return _InfoRow(
+                          label: 'Groupe',
+                          value:
+                              'Groupe introuvable',
+                        );
+                      }
+
+                      return _InfoRow(
+                        label: group.name,
+                        value:
+                            '${_dayOfWeekLabel(group.dayOfWeek)} '
+                            'à ${group.startTime}',
+                      );
+                    },
+                  );
+                },
+              ).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _dayOfWeekLabel(int day) {
+    switch (day) {
+      case 1:
+        return 'Lundi';
+      case 2:
+        return 'Mardi';
+      case 3:
+        return 'Mercredi';
+      case 4:
+        return 'Jeudi';
+      case 5:
+        return 'Vendredi';
+      case 6:
+        return 'Samedi';
+      case 7:
+        return 'Dimanche';
+      default:
+        return 'Jour inconnu';
+    }
   }
 }
