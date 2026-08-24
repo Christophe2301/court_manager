@@ -6,6 +6,7 @@ import '../../../core/models/group.dart';
 import '../../groups/data/group_repository.dart';
 import 'attendance_screen.dart';
 import 'session_edit_screen.dart';
+import 'session_form_screen.dart';
 
 class SessionsPage extends StatefulWidget {
   final String teacherId;
@@ -607,8 +608,19 @@ if (session.status == 'planned')
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes séances'),
+  title: const Text('Mes séances'),
+  actions: [
+    IconButton(
+      icon: const Icon(
+        Icons.add,
       ),
+      tooltip: 'Créer une séance',
+      onPressed: () {
+        _createSession(context);
+      },
+    ),
+  ],
+),
       body: FutureBuilder<List<SessionModel>>(
         future: _sessionsFuture,
         builder: (
@@ -840,6 +852,28 @@ Future<void> _completeSession(
         ),
       ),
     );
+  }
+}
+
+Future<void> _createSession(
+  BuildContext context,
+) async {
+  final created = await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (context) =>
+          SessionFormScreen(
+        teacherId: widget.teacherId,
+      ),
+    ),
+  );
+
+  if (!context.mounted) {
+    return;
+  }
+
+  if (created == true) {
+    await _refreshSessions();
   }
 }
 

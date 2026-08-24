@@ -7,6 +7,7 @@ import '../../teachers/presentation/teachers_screen.dart';
 import '../../groups/data/group_repository.dart';
 import '../../groups/presentation/groups_screen.dart';
 import '../../enrollments/data/enrollment_repository.dart';
+import 'admin_sessions_screen.dart';
 
 class AdministrationScreen extends StatefulWidget {
   const AdministrationScreen({
@@ -380,7 +381,13 @@ class _AdministrationScreenState
                   'Gérer les groupes du club',
               screen: const GroupsScreen(),
             ),
-
+_buildManagementCard(
+  context: context,
+  icon: Icons.calendar_month,
+  title: 'Séances',
+  subtitle: 'Gérer les séances du club',
+  screen: const AdminSessionsScreen(),
+),
             _buildSectionTitle(
               'Prochaine version',
               Icons.upcoming,

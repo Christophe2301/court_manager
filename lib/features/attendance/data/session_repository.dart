@@ -29,6 +29,22 @@ Future<void> updateSession(
       );
 }
 
+Future<List<SessionModel>> getAllSessions() async {
+  final snapshot = await _firestore
+      .collection('sessions')
+      .orderBy('date')
+      .get();
+
+  return snapshot.docs
+      .map(
+        (doc) => SessionModel.fromFirestore(
+          doc.data(),
+          doc.id,
+        ),
+      )
+      .toList();
+}
+
 Future<List<SessionModel>> getSessionsByTeacher(
     String teacherId) async {
   final snapshot = await _firestore
