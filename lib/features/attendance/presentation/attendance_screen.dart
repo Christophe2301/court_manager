@@ -405,7 +405,7 @@ Future<void> _confirmSave() async {
                     member.id] =
                     status ??
                         AttendanceStatus
-                            .absent;
+                            .present;
               }
             }
 
