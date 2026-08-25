@@ -11,10 +11,10 @@ import '../../attendance/data/session_repository.dart';
 import '../../attendance/presentation/attendance_screen.dart';
 import '../../attendance/presentation/sessions_page.dart';
 import '../../groups/providers/group_provider.dart';
+import '../../groups/presentation/teacher_groups_screen.dart';
 
 import '../widgets/welcome_card.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../groups/presentation/teacher_groups_screen.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final AppUser user;
@@ -569,6 +569,21 @@ if (!widget.user.isAdmin) ...[
 
   SizedBox(
     width: double.infinity,
+    child: ElevatedButton.icon(
+      icon: const Icon(
+        Icons.calendar_month,
+      ),
+      label: const Text(
+        'Mes séances',
+      ),
+      onPressed: _openSessions,
+    ),
+  ),
+
+  const SizedBox(height: 12),
+
+  SizedBox(
+    width: double.infinity,
     child: OutlinedButton.icon(
       icon: const Icon(
         Icons.groups,
@@ -591,21 +606,6 @@ if (!widget.user.isAdmin) ...[
     ),
   ),
 ],
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(
-                  Icons.calendar_month,
-                ),
-                label: const Text(
-                  'Mes séances',
-                ),
-                onPressed: _openSessions,
-              ),
-            ),
 
             const SizedBox(height: 20),
 
