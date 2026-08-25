@@ -11,16 +11,19 @@ import '../data/group_repository.dart';
 import 'group_form_screen.dart';
 import '../../enrollments/presentation/add_member_to_group_screen.dart';
 import '../../../core/models/enrollment.dart';
+import '../../members/presentation/member_group_transfer_screen.dart';
 
 import '../../enrollments/providers/enrollment_provider.dart';
 
 class GroupDetailScreen extends ConsumerStatefulWidget {
   final Group group;
+  final bool teacherMode;
 
   const GroupDetailScreen({
-    super.key,
-    required this.group,
-  });
+  super.key,
+  required this.group,
+  this.teacherMode = false,
+});
 
   @override
   ConsumerState<GroupDetailScreen> createState() =>
@@ -256,23 +259,33 @@ Widget build(BuildContext context) {
     appBar: AppBar(
   title: const Text('Fiche groupe'),
 actions: [
+  if (!widget.teacherMode) ...[
   IconButton(
-    icon: const Icon(Icons.edit),
+    icon: const Icon(
+      Icons.edit,
+    ),
     tooltip: 'Modifier',
     onPressed: _editGroup,
   ),
+
   if (_group.isActive)
     IconButton(
-      icon: const Icon(Icons.block),
+      icon: const Icon(
+        Icons.block,
+      ),
       tooltip: 'Désactiver',
       onPressed: _deactivateGroup,
     ),
+
   if (!_group.isActive)
     IconButton(
-      icon: const Icon(Icons.check_circle),
+      icon: const Icon(
+        Icons.check_circle,
+      ),
       tooltip: 'Réactiver',
       onPressed: _reactivateGroup,
     ),
+],
 ],
 ),
       body: ListView(
@@ -394,13 +407,27 @@ SizedBox(
     subtitle: Text(
       member.licenseNumber,
     ),
-    trailing: IconButton(
+    trailing: Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    IconButton(
+      icon: const Icon(
+        Icons.swap_horiz,
+      ),
+      tooltip: 'Changer de groupe',
+      onPressed: () =>
+          _transferMember(member),
+    ),
+    IconButton(
       icon: const Icon(
         Icons.person_remove,
       ),
       tooltip: 'Retirer du groupe',
-      onPressed: () => _removeMemberFromGroup(member),
+      onPressed: () =>
+          _removeMemberFromGroup(member),
     ),
+  ],
+),
   ),
 );
                       },
@@ -551,6 +578,70 @@ SizedBox(
     );
   }
 }
+
+Future<void> _transferMember(
+  Member member,
+) async {
+  final repository =
+      ref.read(enrollmentRepositoryProvider);
+
+  final enrollments =
+      await repository
+          .watchEnrollmentsForMember(
+            member.id,
+          )
+          .first;
+
+  Enrollment? enrollment;
+
+  for (final item in enrollments) {
+    if (item.groupId == _group.id &&
+        item.seasonId == _group.seasonId) {
+      enrollment = item;
+      break;
+    }
+  }
+
+  if (enrollment == null) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Inscription active introuvable.',
+        ),
+      ),
+    );
+
+    return;
+  }
+
+  if (!mounted) {
+    return;
+  }
+
+  final changed =
+      await Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (context) =>
+          MemberGroupTransferScreen(
+        memberId: member.id,
+        enrollment: enrollment!,
+        currentGroup: _group,
+      ),
+    ),
+  );
+
+  if (changed == true && mounted) {
+    ref.invalidate(
+      groupMembersProvider(_group.id),
+    );
+  }
+}
+
 Future<void> _removeMemberFromGroup(
   Member member,
 ) async {

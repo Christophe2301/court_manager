@@ -92,19 +92,123 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ============================================================
-    // ENROLLMENTS
-    // ============================================================
+// ============================================================
+// ENROLLMENTS
+// ============================================================
 
-    match /enrollments/{enrollmentId} {
+match /enrollments/{enrollmentId} {
 
-      // Administrateur et professeurs peuvent consulter
-      // les inscriptions.
-      allow read: if isAdmin() || isTeacher();
+  // Administrateur et professeurs peuvent consulter
+  // les inscriptions.
+  allow read: if isAdmin() || isTeacher();
 
-      // Gestion des inscriptions réservée à l'administrateur.
-      allow write: if isAdmin();
-    }
+  // Administrateur : accès complet.
+  allow create, update, delete: if isAdmin();
+
+  // ----------------------------------------------------------
+  // Professeur : création d'une inscription
+  // ----------------------------------------------------------
+  //
+  // Nécessaire notamment lors d'un changement de groupe.
+  // Le groupe de destination doit être actif.
+  // L'adhérent doit exister.
+  // La saison doit correspondre à celle du groupe.
+  //
+  allow create: if isTeacher()
+    && request.resource.data.memberId is string
+    && request.resource.data.groupId is string
+    && request.resource.data.seasonId is string
+    && request.resource.data.isActive == true
+    && request.resource.data.endDate == null
+
+    && exists(
+      /databases/$(database)/documents/members/$(request.resource.data.memberId)
+    )
+
+    && exists(
+      /databases/$(database)/documents/groups/$(request.resource.data.groupId)
+    )
+
+    && get(
+      /databases/$(database)/documents/groups/$(request.resource.data.groupId)
+    ).data.isActive == true
+
+    && request.resource.data.seasonId ==
+       get(
+         /databases/$(database)/documents/groups/$(request.resource.data.groupId)
+       ).data.seasonId
+
+    && request.resource.data.createdBy ==
+       request.auth.uid
+
+    && request.resource.data.updatedBy ==
+       request.auth.uid;
+
+  // ----------------------------------------------------------
+  // Professeur : clôture d'une inscription
+  // ----------------------------------------------------------
+  //
+  // Le professeur doit faire partie des enseignants
+  // du groupe de départ.
+  //
+  // Il peut seulement :
+  // - désactiver l'inscription
+  // - renseigner endDate
+  // - modifier updatedAt / updatedBy
+  //
+  allow update: if isTeacher()
+
+    && exists(
+      /databases/$(database)/documents/groups/$(resource.data.groupId)
+    )
+
+    && request.auth.uid in get(
+      /databases/$(database)/documents/groups/$(resource.data.groupId)
+    ).data.teacherIds
+
+    // L'inscription doit être active avant l'opération.
+    && resource.data.isActive == true
+
+    // Elle doit être désactivée.
+    && request.resource.data.isActive == false
+
+    // Les données structurantes ne peuvent pas changer.
+    && request.resource.data.memberId ==
+       resource.data.memberId
+
+    && request.resource.data.groupId ==
+       resource.data.groupId
+
+    && request.resource.data.seasonId ==
+       resource.data.seasonId
+
+    && request.resource.data.startDate ==
+       resource.data.startDate
+
+    && request.resource.data.createdAt ==
+       resource.data.createdAt
+
+    && request.resource.data.createdBy ==
+       resource.data.createdBy
+
+    && request.resource.data.updatedBy ==
+       request.auth.uid
+
+    // Seuls ces champs peuvent être modifiés.
+    && request.resource.data
+         .diff(resource.data)
+         .affectedKeys()
+         .hasOnly([
+           'isActive',
+           'endDate',
+           'updatedAt',
+           'updatedBy'
+         ]);
+
+  // Un professeur ne supprime jamais physiquement
+  // une inscription.
+  allow delete: if false;
+}
 
     // ============================================================
     // SESSIONS

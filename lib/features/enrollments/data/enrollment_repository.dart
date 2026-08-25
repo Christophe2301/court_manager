@@ -145,4 +145,116 @@ Future<void> deactivateEnrollment({
   });
 }
 
+Future<void> transferEnrollment({
+  required String memberId,
+  required String fromGroupId,
+  required String toGroupId,
+  required String seasonId,
+  required DateTime transferDate,
+  required String updatedBy,
+}) async {
+  if (fromGroupId == toGroupId) {
+    throw StateError(
+      'Le groupe de départ et le groupe d’arrivée '
+      'doivent être différents.',
+    );
+  }
+
+  final targetExists =
+      await activeEnrollmentExists(
+    memberId: memberId,
+    groupId: toGroupId,
+    seasonId: seasonId,
+  );
+
+  if (targetExists) {
+    throw StateError(
+      'Cet adhérent est déjà inscrit '
+      'dans le groupe sélectionné.',
+    );
+  }
+
+  final sourceSnapshot = await _firestore
+      .collection('enrollments')
+      .where(
+        'memberId',
+        isEqualTo: memberId,
+      )
+      .where(
+        'groupId',
+        isEqualTo: fromGroupId,
+      )
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .where(
+        'isActive',
+        isEqualTo: true,
+      )
+      .limit(1)
+      .get();
+
+  if (sourceSnapshot.docs.isEmpty) {
+    throw StateError(
+      'Inscription active introuvable '
+      'dans le groupe de départ.',
+    );
+  }
+
+  final now = DateTime.now();
+
+  final newEnrollmentRef =
+      _firestore
+          .collection('enrollments')
+          .doc();
+
+  final batch = _firestore.batch();
+
+  batch.update(
+    sourceSnapshot.docs.first.reference,
+    {
+      'isActive': false,
+      'endDate':
+          Timestamp.fromDate(
+        transferDate,
+      ),
+      'updatedAt':
+          Timestamp.fromDate(now),
+      'updatedBy':
+          updatedBy,
+    },
+  );
+
+  batch.set(
+    newEnrollmentRef,
+    {
+      'memberId':
+          memberId,
+      'groupId':
+          toGroupId,
+      'seasonId':
+          seasonId,
+      'startDate':
+          Timestamp.fromDate(
+        transferDate,
+      ),
+      'endDate':
+          null,
+      'isActive':
+          true,
+      'createdAt':
+          Timestamp.fromDate(now),
+      'updatedAt':
+          Timestamp.fromDate(now),
+      'createdBy':
+          updatedBy,
+      'updatedBy':
+          updatedBy,
+    },
+  );
+
+  await batch.commit();
+}
+
 }

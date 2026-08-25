@@ -8,6 +8,7 @@ import '../data/member_repository.dart';
 import 'member_form_screen.dart';
 import '../../../core/models/member.dart';
 import '../../../core/models/group.dart';
+import 'member_group_transfer_screen.dart';
 
 class MemberDetailScreen extends ConsumerWidget {
   final Member member;
@@ -472,12 +473,58 @@ class _InfoRow extends StatelessWidget {
                         );
                       }
 
-                      return _InfoRow(
-                        label: group.name,
-                        value:
-                            '${_dayOfWeekLabel(group.dayOfWeek)} '
-                            'à ${group.startTime}',
-                      );
+                      return Padding(
+  padding: const EdgeInsets.only(
+    bottom: 8,
+  ),
+  child: Row(
+    crossAxisAlignment:
+        CrossAxisAlignment.center,
+    children: [
+      Expanded(
+        child: _InfoRow(
+          label: group.name,
+          value:
+              '${_dayOfWeekLabel(group.dayOfWeek)} '
+              'à ${group.startTime}',
+        ),
+      ),
+
+      const SizedBox(width: 8),
+
+      TextButton.icon(
+        onPressed: () async {
+          final changed =
+              await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  MemberGroupTransferScreen(
+                memberId: memberId,
+                enrollment: enrollment,
+                currentGroup: group,
+              ),
+            ),
+          );
+
+          if (changed == true) {
+            ref.invalidate(
+              memberEnrollmentsProvider(
+                memberId,
+              ),
+            );
+          }
+        },
+        icon: const Icon(
+          Icons.swap_horiz,
+        ),
+        label: const Text(
+          'Changer',
+        ),
+      ),
+    ],
+  ),
+);
                     },
                   );
                 },
