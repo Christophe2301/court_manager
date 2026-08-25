@@ -7,6 +7,14 @@ import '../../attendance/presentation/attendance_screen.dart';
 import '../../attendance/presentation/session_edit_screen.dart';
 import '../../attendance/presentation/session_form_screen.dart';
 import '../../groups/data/group_repository.dart';
+import '../../auth/models/app_user.dart';
+import '../../teachers/data/teacher_repository.dart';
+
+enum _SessionPeriodFilter {
+  upcoming,
+  past,
+  all,
+}
 
 class AdminSessionsScreen extends StatefulWidget {
   const AdminSessionsScreen({
@@ -26,6 +34,17 @@ class _AdminSessionsScreenState
   final GroupRepository _groupRepository =
       GroupRepository();
 
+final TeacherRepository _teacherRepository =
+    TeacherRepository();
+
+late Future<List<AppUser>> _teachersFuture;
+
+_SessionPeriodFilter _periodFilter =
+    _SessionPeriodFilter.upcoming;
+
+String? _selectedGroupId;
+String? _selectedTeacherId;
+
   late Future<List<SessionModel>> _sessionsFuture;
   late Future<List<Group>> _groupsFuture;
 
@@ -36,12 +55,15 @@ class _AdminSessionsScreenState
   }
 
   void _loadData() {
-    _sessionsFuture =
-        _sessionRepository.getAllSessions();
+  _sessionsFuture =
+      _sessionRepository.getAllSessions();
 
-    _groupsFuture =
-        _groupRepository.watchActiveGroups().first;
-  }
+  _groupsFuture =
+      _groupRepository.watchActiveGroups().first;
+
+  _teachersFuture =
+      _teacherRepository.watchActiveTeachers().first;
+}
 
   Future<void> _refresh() async {
     setState(() {
@@ -112,6 +134,60 @@ class _AdminSessionsScreenState
 
     return '$day/$month/${date.year}';
   }
+
+DateTime _dateOnly(DateTime date) {
+  return DateTime(
+    date.year,
+    date.month,
+    date.day,
+  );
+}
+
+bool _matchesPeriod(
+  SessionModel session,
+) {
+  final today =
+      _dateOnly(DateTime.now());
+
+  final sessionDate =
+      _dateOnly(session.date);
+
+  switch (_periodFilter) {
+    case _SessionPeriodFilter.upcoming:
+      return !sessionDate.isBefore(today);
+
+    case _SessionPeriodFilter.past:
+      return sessionDate.isBefore(today);
+
+    case _SessionPeriodFilter.all:
+      return true;
+  }
+}
+
+List<SessionModel> _filterSessions(
+  List<SessionModel> sessions,
+) {
+  return sessions.where((session) {
+    if (!_matchesPeriod(session)) {
+      return false;
+    }
+
+    if (_selectedGroupId != null &&
+        session.groupId !=
+            _selectedGroupId) {
+      return false;
+    }
+
+    if (_selectedTeacherId != null &&
+        !session.teacherIds.contains(
+          _selectedTeacherId,
+        )) {
+      return false;
+    }
+
+    return true;
+  }).toList();
+}
 
   String _formatStatus(String status) {
     switch (status) {
@@ -191,10 +267,9 @@ class _AdminSessionsScreenState
             const SizedBox(height: 4),
 
             Text(
-              '${_formatDate(session.date)} '
-              '• ${session.startTime} '
-              '• ${session.durationMinutes} min',
-            ),
+  '${session.startTime} '
+  '• ${session.durationMinutes} min',
+),
 
             const SizedBox(height: 6),
 
@@ -383,28 +458,333 @@ class _AdminSessionsScreenState
                   group.id: group,
               };
 
-              return RefreshIndicator(
-                onRefresh: _refresh,
-                child: ListView.builder(
-                  padding:
-                      const EdgeInsets.all(12),
-                  itemCount:
-                      sessions.length,
-                  itemBuilder: (
-                    context,
-                    index,
-                  ) {
-                    final session =
-                        sessions[index];
+return FutureBuilder<List<AppUser>>(
+  future: _teachersFuture,
+  builder: (
+    context,
+    teacherSnapshot,
+  ) {
+    if (teacherSnapshot.connectionState ==
+        ConnectionState.waiting) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-                    return _buildSessionCard(
-                      context,
-                      session,
-                      groupsById,
-                    );
-                  },
+    if (teacherSnapshot.hasError) {
+      return Center(
+        child: Text(
+          'Erreur lors du chargement '
+          'des professeurs : '
+          '${teacherSnapshot.error}',
+        ),
+      );
+    }
+
+    final teachers =
+        teacherSnapshot.data ?? [];
+
+    final filteredSessions =
+        _filterSessions(sessions);
+
+    final sortedSessions =
+    [...filteredSessions];
+
+final today =
+    _dateOnly(DateTime.now());
+
+int category(
+  SessionModel session,
+) {
+  final sessionDate =
+      _dateOnly(session.date);
+
+  if (sessionDate == today) {
+    return 0;
+  }
+
+  if (sessionDate.isAfter(today)) {
+    return 1;
+  }
+
+  return 2;
+}
+
+sortedSessions.sort((a, b) {
+  final categoryA = category(a);
+  final categoryB = category(b);
+
+  if (categoryA != categoryB) {
+    return categoryA.compareTo(
+      categoryB,
+    );
+  }
+
+  final dateA =
+      _dateOnly(a.date);
+
+  final dateB =
+      _dateOnly(b.date);
+
+  if (categoryA == 2) {
+    final comparison =
+        dateB.compareTo(dateA);
+
+    if (comparison != 0) {
+      return comparison;
+    }
+  } else {
+    final comparison =
+        dateA.compareTo(dateB);
+
+    if (comparison != 0) {
+      return comparison;
+    }
+  }
+
+  return a.startTime.compareTo(
+    b.startTime,
+  );
+});
+
+final widgets = <Widget>[];
+
+DateTime? previousDate;
+
+for (final session in sortedSessions) {
+  final currentDate =
+      _dateOnly(session.date);
+
+  if (previousDate == null ||
+      currentDate != previousDate) {
+    if (widgets.isNotEmpty) {
+      widgets.add(
+        const SizedBox(height: 12),
+      );
+    }
+
+    widgets.add(
+      Padding(
+        padding:
+            const EdgeInsets.fromLTRB(
+          4,
+          8,
+          4,
+          6,
+        ),
+        child: Text(
+          _formatDate(session.date),
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(
+                fontWeight:
+                    FontWeight.bold,
+              ),
+        ),
+      ),
+    );
+
+    previousDate = currentDate;
+  }
+
+  widgets.add(
+    _buildSessionCard(
+      context,
+      session,
+      groupsById,
+    ),
+  );
+}
+
+return Column(
+  children: [
+    Padding(
+      padding:
+          const EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        4,
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          SizedBox(
+            width: 190,
+            child:
+                DropdownButtonFormField<
+                    _SessionPeriodFilter>(
+                      isExpanded: true,
+              initialValue:
+                  _periodFilter,
+              decoration:
+                  const InputDecoration(
+                labelText: 'Période',
+                border:
+                    OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value:
+                      _SessionPeriodFilter
+                          .upcoming,
+                  child: Text(
+                    'À venir',
+                  ),
                 ),
-              );
+                DropdownMenuItem(
+                  value:
+                      _SessionPeriodFilter
+                          .past,
+                  child: Text(
+                    'Passées',
+                  ),
+                ),
+                DropdownMenuItem(
+                  value:
+                      _SessionPeriodFilter
+                          .all,
+                  child: Text(
+                    'Toutes',
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+
+                setState(() {
+                  _periodFilter =
+                      value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(
+            width: 260,
+            child:
+                DropdownButtonFormField<
+                    String?>(
+                      isExpanded: true,
+              initialValue:
+                  _selectedGroupId,
+              decoration:
+                  const InputDecoration(
+                labelText: 'Groupe',
+                border:
+                    OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<
+                    String?>(
+                  value: null,
+                  child: Text(
+                    'Tous les groupes',
+                  ),
+                ),
+                ...groups.map(
+                  (group) =>
+                      DropdownMenuItem<
+                          String?>(
+                    value: group.id,
+                    child: Text(
+                      group.name,
+                      overflow:
+                          TextOverflow
+                              .ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedGroupId =
+                      value;
+                });
+              },
+            ),
+          ),
+
+          SizedBox(
+            width: 220,
+            child:
+                DropdownButtonFormField<
+                    String?>(
+                      isExpanded: true,
+              initialValue:
+                  _selectedTeacherId,
+              decoration:
+                  const InputDecoration(
+                labelText: 'Professeur',
+                border:
+                    OutlineInputBorder(),
+              ),
+              items: [
+                const DropdownMenuItem<
+                    String?>(
+                  value: null,
+                  child: Text(
+                    'Tous les professeurs',
+                  ),
+                ),
+                ...teachers.map(
+                  (teacher) =>
+                      DropdownMenuItem<
+                          String?>(
+                    value:
+                        teacher.uid,
+                    child: Text(
+                      '${teacher.firstName} '
+                      '${teacher.lastName}',
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedTeacherId =
+                      value;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+
+    const SizedBox(height: 4),
+
+    Expanded(
+      child: sortedSessions.isEmpty
+          ? const Center(
+              child: Text(
+                'Aucune séance ne correspond '
+                'aux filtres sélectionnés.',
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding:
+                    const EdgeInsets.all(
+                  12,
+                ),
+                physics:
+                    const AlwaysScrollableScrollPhysics(),
+                children: widgets,
+              ),
+            ),
+    ),
+  ],
+);
+  },
+);
+
+
             },
           );
         },
