@@ -395,15 +395,19 @@ title: Text(
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem<int>(
-                  value: 60,
-                  child: Text('1 heure'),
-                ),
-                DropdownMenuItem<int>(
-                  value: 90,
-                  child: Text('1 heure 30'),
-                ),
-              ],
+  DropdownMenuItem<int>(
+    value: 45,
+    child: Text('45 minutes'),
+  ),
+  DropdownMenuItem<int>(
+    value: 60,
+    child: Text('1 heure'),
+  ),
+  DropdownMenuItem<int>(
+    value: 90,
+    child: Text('1 heure 30'),
+  ),
+],
               onChanged: (value) {
                 if (value == null) {
                   return;

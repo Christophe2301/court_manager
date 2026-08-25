@@ -126,9 +126,25 @@ class _SessionEditScreenState
         );
       }
 
-      final groups = await _groupRepository
-          .watchGroupsForTeacher(user.uid)
-          .first;
+      final userDoc = await _firestore
+    .collection('users')
+    .doc(user.uid)
+    .get();
+
+final userData = userDoc.data();
+
+final isAdmin =
+    userData?['role'] == 'admin';
+
+final groups = isAdmin
+    ? await _groupRepository
+        .watchActiveGroups()
+        .first
+    : await _groupRepository
+        .watchGroupsForTeacher(
+          user.uid,
+        )
+        .first;
 
       final teacherSnapshot = await _firestore
           .collection('users')

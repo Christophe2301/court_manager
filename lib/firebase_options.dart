@@ -57,12 +57,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDgv1pKVwOGsmTzyv-6nqus0B5SyBFoj94',
-    appId: '1:55983653236:android:3cdcbe40ca1df06cf06c21',
+    appId: '1:55983653236:android:cdde8c76b5c9c874f06c21',
     messagingSenderId: '55983653236',
     projectId: 'courtmanager-64e23',
     storageBucket: 'courtmanager-64e23.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB7OmlTYKRTFU_jGEFhxBD4yGRrB5S7dNg',
     appId: '1:55983653236:ios:1b0537f4957aaa29f06c21',

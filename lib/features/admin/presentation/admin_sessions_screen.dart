@@ -226,6 +226,12 @@ class _AdminSessionsScreenState
                   session,
                 );
                 break;
+
+                case 'delete':
+  await _deleteSession(
+    session,
+  );
+  break;
             }
           },
           itemBuilder: (context) => [
@@ -257,6 +263,20 @@ class _AdminSessionsScreenState
                 ],
               ),
             ),
+            const PopupMenuItem<String>(
+  value: 'delete',
+  child: Row(
+    children: [
+      Icon(
+        Icons.delete_outline,
+      ),
+      SizedBox(width: 10),
+      Text(
+        'Supprimer la séance',
+      ),
+    ],
+  ),
+),
           ],
         ),
         onTap: () {
@@ -391,4 +411,91 @@ class _AdminSessionsScreenState
       ),
     );
   }
+
+Future<void> _deleteSession(
+  SessionModel session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Supprimer la séance ?',
+        ),
+        content: const Text(
+          'Cette action est irréversible.\n\n'
+          'Une séance ayant déjà un appel enregistré '
+          'ne peut pas être supprimée.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text(
+              'Supprimer',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  try {
+    await _sessionRepository.deleteSession(
+      session.id,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Séance supprimée.',
+        ),
+      ),
+    );
+
+    await _refresh();
+  } on StateError catch (error) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error.message,
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Erreur lors de la suppression : $error',
+        ),
+      ),
+    );
+  }
+}
+
 }

@@ -1,4 +1,4 @@
-package com.example.court_manager
+package fr.courtmanager.app
 
 import io.flutter.embedding.android.FlutterActivity
 

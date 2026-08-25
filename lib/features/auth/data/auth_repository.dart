@@ -57,6 +57,42 @@ class AuthRepository {
     );
   }
 
+Future<void> sendPasswordResetEmail(
+  String email,
+) async {
+  await _auth.setLanguageCode('fr');
+
+  await _auth.sendPasswordResetEmail(
+    email: email.trim(),
+  );
+}
+
+Future<void> changePassword({
+  required String currentPassword,
+  required String newPassword,
+}) async {
+  final user = _auth.currentUser;
+
+  if (user == null || user.email == null) {
+    throw FirebaseAuthException(
+      code: 'user-not-found',
+      message: 'Utilisateur non connecté.',
+    );
+  }
+
+  final credential = EmailAuthProvider.credential(
+    email: user.email!,
+    password: currentPassword,
+  );
+
+  await user.reauthenticateWithCredential(
+    credential,
+  );
+
+  await user.updatePassword(
+    newPassword,
+  );
+}
 
   Future<void> signOut() async {
     await _auth.signOut();

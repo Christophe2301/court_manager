@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/auth_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -122,8 +123,20 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
+Align(
+  alignment: Alignment.centerRight,
+  child: TextButton(
+    onPressed:
+        _loading
+            ? null
+            : _forgotPassword,
+    child: const Text(
+      "Mot de passe oublié ?",
+    ),
+  ),
+),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
 
             if (_error != null)
@@ -157,4 +170,78 @@ class _LoginPageState extends State<LoginPage> {
     );
 
   }
+
+Future<void> _forgotPassword() async {
+  final email =
+      _emailController.text.trim();
+
+  if (email.isEmpty) {
+    setState(() {
+      _error =
+          "Saisissez d'abord votre adresse e-mail.";
+    });
+
+    return;
+  }
+
+  try {
+    await _authRepository
+        .sendPasswordResetEmail(
+      email,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _error = null;
+    });
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+      const SnackBar(
+        content: Text(
+          "Un e-mail de réinitialisation "
+          "du mot de passe a été envoyé.",
+        ),
+      ),
+    );
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      switch (e.code) {
+        case 'invalid-email':
+          _error =
+              "Adresse e-mail invalide.";
+          break;
+
+        case 'user-not-found':
+          _error =
+              "Aucun compte ne correspond "
+              "à cette adresse e-mail.";
+          break;
+
+        default:
+          _error =
+              "Impossible d'envoyer "
+              "l'e-mail de réinitialisation.";
+      }
+    });
+  } catch (_) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _error =
+          "Impossible d'envoyer "
+          "l'e-mail de réinitialisation.";
+    });
+  }
+}
+
 }

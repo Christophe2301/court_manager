@@ -2,6 +2,14 @@
   "projects": {
     "default": "courtmanager-64e23"
   },
-  "targets": {},
+  "targets": {
+    "courtmanager-64e23": {
+      "hosting": {
+        "tcodon": [
+          "courtmanager-tcodon"
+        ]
+      }
+    }
+  },
   "etags": {}
 }

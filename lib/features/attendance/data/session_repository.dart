@@ -86,4 +86,29 @@ Future<List<SessionModel>> getSessionsByGroup(
         ),
       )
       .toList();
-}}
+}
+
+Future<void> deleteSession(String sessionId) async {
+  final attendanceSnapshot = await _firestore
+      .collection('attendance')
+      .where(
+        'sessionId',
+        isEqualTo: sessionId,
+      )
+      .limit(1)
+      .get();
+
+  if (attendanceSnapshot.docs.isNotEmpty) {
+    throw StateError(
+      'Impossible de supprimer une séance '
+      'pour laquelle un appel a été enregistré.',
+    );
+  }
+
+  await _firestore
+      .collection('sessions')
+      .doc(sessionId)
+      .delete();
+}
+
+}

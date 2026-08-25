@@ -13,6 +13,7 @@ import '../../attendance/presentation/sessions_page.dart';
 import '../../groups/providers/group_provider.dart';
 
 import '../widgets/welcome_card.dart';
+import '../../auth/data/auth_repository.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   final AppUser user;
@@ -32,6 +33,8 @@ class _DashboardScreenState
   final SessionRepository _sessionRepository =
       SessionRepository();
 
+final AuthRepository _authRepository =
+    AuthRepository();
   late Future<List<SessionModel>> _sessionsFuture;
 
   @override
@@ -106,6 +109,248 @@ class _DashboardScreenState
 
     await FirebaseAuth.instance.signOut();
   }
+
+Future<void> _changePassword() async {
+  final currentPasswordController =
+      TextEditingController();
+
+  final newPasswordController =
+      TextEditingController();
+
+  final confirmPasswordController =
+      TextEditingController();
+
+  String? errorMessage;
+  bool isSaving = false;
+
+  final changed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (
+          context,
+          setDialogState,
+        ) {
+          Future<void> save() async {
+            final currentPassword =
+                currentPasswordController.text;
+
+            final newPassword =
+                newPasswordController.text;
+
+            final confirmPassword =
+                confirmPasswordController.text;
+
+            if (currentPassword.isEmpty ||
+                newPassword.isEmpty ||
+                confirmPassword.isEmpty) {
+              setDialogState(() {
+                errorMessage =
+                    'Tous les champs sont obligatoires.';
+              });
+
+              return;
+            }
+
+            if (newPassword.length < 6) {
+              setDialogState(() {
+                errorMessage =
+                    'Le nouveau mot de passe doit '
+                    'contenir au moins 6 caractères.';
+              });
+
+              return;
+            }
+
+            if (newPassword !=
+                confirmPassword) {
+              setDialogState(() {
+                errorMessage =
+                    'Les deux nouveaux mots de passe '
+                    'ne correspondent pas.';
+              });
+
+              return;
+            }
+
+            setDialogState(() {
+              isSaving = true;
+              errorMessage = null;
+            });
+
+            try {
+              await _authRepository.changePassword(
+                currentPassword:
+                    currentPassword,
+                newPassword:
+                    newPassword,
+              );
+
+              if (!dialogContext.mounted) {
+                return;
+              }
+
+              Navigator.of(
+                dialogContext,
+              ).pop(true);
+            } on FirebaseAuthException catch (e) {
+              String message;
+
+              switch (e.code) {
+                case 'wrong-password':
+                case 'invalid-credential':
+                  message =
+                      'Le mot de passe actuel '
+                      'est incorrect.';
+                  break;
+
+                case 'weak-password':
+                  message =
+                      'Le nouveau mot de passe '
+                      'est trop faible.';
+                  break;
+
+                case 'too-many-requests':
+                  message =
+                      'Trop de tentatives. '
+                      'Veuillez réessayer plus tard.';
+                  break;
+
+                default:
+                  message =
+                      'Impossible de modifier '
+                      'le mot de passe.';
+              }
+
+              setDialogState(() {
+                errorMessage = message;
+                isSaving = false;
+              });
+            } catch (_) {
+              setDialogState(() {
+                errorMessage =
+                    'Impossible de modifier '
+                    'le mot de passe.';
+                isSaving = false;
+              });
+            }
+          }
+
+          return AlertDialog(
+            title: const Text(
+              'Modifier mon mot de passe',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller:
+                        currentPasswordController,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(
+                      labelText:
+                          'Mot de passe actuel',
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller:
+                        newPasswordController,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(
+                      labelText:
+                          'Nouveau mot de passe',
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller:
+                        confirmPasswordController,
+                    obscureText: true,
+                    decoration:
+                        const InputDecoration(
+                      labelText:
+                          'Confirmer le nouveau mot de passe',
+                    ),
+                  ),
+
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 16),
+
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSaving
+                    ? null
+                    : () {
+                        Navigator.of(
+                          dialogContext,
+                        ).pop(false);
+                      },
+                child: const Text(
+                  'Annuler',
+                ),
+              ),
+              ElevatedButton(
+                onPressed:
+                    isSaving
+                        ? null
+                        : save,
+                child: isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child:
+                            CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Modifier',
+                      ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  currentPasswordController.dispose();
+  newPasswordController.dispose();
+  confirmPasswordController.dispose();
+
+  if (!mounted ||
+      changed != true) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Mot de passe modifié avec succès.',
+      ),
+    ),
+  );
+}
 
   Future<void> _openSessions() async {
     await Navigator.push(
@@ -261,28 +506,45 @@ class _DashboardScreenState
           PopupMenuButton<String>(
             tooltip: 'Menu',
             onSelected: (value) async {
-              if (value == 'logout') {
-                await _confirmLogout(
-                  context,
-                );
-              }
-            },
+  if (value == 'password') {
+    await _changePassword();
+  } else if (value == 'logout') {
+    await _confirmLogout(
+      context,
+    );
+  }
+},
             itemBuilder: (context) => [
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                    ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Déconnexion',
-                    ),
-                  ],
-                ),
-              ),
-            ],
+  const PopupMenuItem<String>(
+    value: 'password',
+    child: Row(
+      children: [
+        Icon(
+          Icons.lock_outline,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Modifier mon mot de passe',
+        ),
+      ],
+    ),
+  ),
+
+  const PopupMenuItem<String>(
+    value: 'logout',
+    child: Row(
+      children: [
+        Icon(
+          Icons.logout,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Déconnexion',
+        ),
+      ],
+    ),
+  ),
+],
           ),
         ],
       ),

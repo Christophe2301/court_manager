@@ -4,7 +4,7 @@
       "android": {
         "default": {
           "projectId": "courtmanager-64e23",
-          "appId": "1:55983653236:android:3cdcbe40ca1df06cf06c21",
+          "appId": "1:55983653236:android:cdde8c76b5c9c874f06c21",
           "fileOutput": "android/app/google-services.json"
         }
       },
@@ -12,7 +12,7 @@
         "lib/firebase_options.dart": {
           "projectId": "courtmanager-64e23",
           "configurations": {
-            "android": "1:55983653236:android:3cdcbe40ca1df06cf06c21",
+            "android": "1:55983653236:android:cdde8c76b5c9c874f06c21",
             "ios": "1:55983653236:ios:1b0537f4957aaa29f06c21",
             "web": "1:55983653236:web:4711a33cadbe6939f06c21"
           }
@@ -22,5 +22,20 @@
   },
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "hosting": {
+    "target": "tcodon",
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   }
 }
