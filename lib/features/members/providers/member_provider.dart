@@ -28,7 +28,9 @@ final activeMembersProvider =
   final repository =
       ref.watch(memberRepositoryProvider);
 
-  return repository.watchActiveMembers();
+  return repository.watchMembersForSeason(
+  '2026-2027',
+);
   
 });
 
@@ -37,5 +39,7 @@ final inactiveMembersProvider =
   final repository =
       ref.watch(memberRepositoryProvider);
 
-  return repository.watchInactiveMembers();
+  return repository.watchInactiveMembersForSeason(
+  '2026-2027',
+);
 });

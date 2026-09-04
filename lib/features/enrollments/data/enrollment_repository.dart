@@ -34,6 +34,28 @@ class EnrollmentRepository {
         );
   }
 
+Stream<List<Enrollment>> watchEnrollmentsForSeason(
+  String seasonId,
+) {
+  return _firestore
+      .collection('enrollments')
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Enrollment.fromFirestore(doc),
+            )
+            .where(
+              (enrollment) => enrollment.isActive,
+            )
+            .toList(),
+      );
+}
+
 Stream<List<Enrollment>> watchEnrollmentsForMember(
   String memberId,
 ) {
@@ -143,6 +165,49 @@ Future<void> deactivateEnrollment({
     'updatedAt': Timestamp.fromDate(now),
     'updatedBy': updatedBy,
   });
+}
+
+Future<void> deactivateEnrollmentsForMember({
+  required String memberId,
+  required String seasonId,
+  required String updatedBy,
+}) async {
+  final snapshot = await _firestore
+      .collection('enrollments')
+      .where(
+        'memberId',
+        isEqualTo: memberId,
+      )
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .where(
+        'isActive',
+        isEqualTo: true,
+      )
+      .get();
+
+  if (snapshot.docs.isEmpty) {
+    return;
+  }
+
+  final now = DateTime.now();
+  final batch = _firestore.batch();
+
+  for (final doc in snapshot.docs) {
+    batch.update(
+      doc.reference,
+      {
+        'isActive': false,
+        'endDate': Timestamp.fromDate(now),
+        'updatedAt': Timestamp.fromDate(now),
+        'updatedBy': updatedBy,
+      },
+    );
+  }
+
+  await batch.commit();
 }
 
 Future<void> transferEnrollment({

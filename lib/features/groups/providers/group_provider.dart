@@ -16,7 +16,9 @@ final activeGroupsProvider =
   final repository =
       ref.watch(groupRepositoryProvider);
 
-  return repository.watchActiveGroups();
+  return repository.watchActiveGroupsForSeason(
+  '2026-2027',
+);
 });
 
 final inactiveGroupsProvider =
@@ -24,7 +26,9 @@ final inactiveGroupsProvider =
   final repository =
       ref.watch(groupRepositoryProvider);
 
-  return repository.watchInactiveGroups();
+  return repository.watchInactiveGroupsForSeason(
+  '2026-2027',
+);
 });
 
 final teacherGroupsProvider =
@@ -36,6 +40,7 @@ final teacherGroupsProvider =
 
     return repository.watchGroupsForTeacher(
       teacherId,
+      '2026-2027',
     );
   },
 );

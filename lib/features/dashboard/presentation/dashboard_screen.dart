@@ -51,8 +51,9 @@ final AuthRepository _authRepository =
     } else {
       _sessionsFuture =
           _sessionRepository.getSessionsByTeacher(
-        widget.user.uid,
-      );
+  widget.user.uid,
+  '2026-2027',
+);
     }
   }
 

@@ -63,6 +63,7 @@ class _SessionFormScreenState
           _groupRepository
               .watchGroupsForTeacher(
                 widget.teacherId!,
+                '2026-2027',
               )
               .first;
 
@@ -242,6 +243,7 @@ class _SessionFormScreenState
       final session = SessionModel(
         id: '',
         groupId: group.id,
+        seasonId: group.seasonId,
         teacherIds:
             _selectedTeacherIds.toList(),
         date: _selectedDate,

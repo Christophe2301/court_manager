@@ -44,7 +44,11 @@ class _MemberGroupTransferScreenState
     super.initState();
 
     _groupsFuture =
-        _groupRepository.watchActiveGroups().first;
+    _groupRepository
+        .watchActiveGroupsForSeason(
+          widget.enrollment.seasonId,
+        )
+        .first;
   }
 
   String _formatDate(DateTime date) {

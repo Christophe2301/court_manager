@@ -143,6 +143,7 @@ final groups = isAdmin
     : await _groupRepository
         .watchGroupsForTeacher(
           user.uid,
+          widget.session.seasonId,
         )
         .first;
 
@@ -334,6 +335,7 @@ final groups = isAdmin
           SessionModel(
         id: widget.session.id,
         groupId: _selectedGroup!.id,
+        seasonId: widget.session.seasonId,
         teacherIds:
             _selectedTeacherIds.toList(),
         date: _selectedDate,

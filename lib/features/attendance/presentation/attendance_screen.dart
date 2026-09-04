@@ -62,6 +62,7 @@ class _AttendanceScreenState
         _groupRepository
             .watchGroupsForTeacher(
               widget.session.teacherIds.first,
+              widget.session.seasonId,
             )
             .first;
 

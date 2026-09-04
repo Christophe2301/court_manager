@@ -46,9 +46,14 @@ class _AdministrationScreenState
 
   void _loadCounts() {
     _membersCountFuture =
-        _memberRepository.watchActiveMembers().first.then(
-              (members) => members.length,
-            );
+    _memberRepository
+        .watchMembersForSeason(
+          '2026-2027',
+        )
+        .first
+        .then(
+          (members) => members.length,
+        );
 
     _teachersCountFuture =
         _teacherRepository.watchActiveTeachers().first.then(
@@ -56,52 +61,27 @@ class _AdministrationScreenState
             );
 
     _groupsCountFuture =
-        _groupRepository.watchActiveGroups().first.then(
-              (groups) => groups.length,
-            );
+    _groupRepository
+        .watchActiveGroupsForSeason(
+          '2026-2027',
+        )
+        .first
+        .then(
+          (groups) => groups.length,
+        );
 
     _enrollmentsCountFuture =
-        _loadEnrollmentsCount();
+    _enrollmentRepository
+        .watchEnrollmentsForSeason(
+          '2026-2027',
+        )
+        .first
+        .then(
+          (enrollments) => enrollments.length,
+        );
   }
 
-  Future<int> _loadEnrollmentsCount() async {
-    final activeMembers =
-        await _memberRepository.watchActiveMembers().first;
-
-    final activeMemberIds =
-        <String>{
-      for (final member in activeMembers)
-        member.id,
-    };
-
-    if (activeMemberIds.isEmpty) {
-      return 0;
-    }
-
-    final groups =
-        await _groupRepository.watchActiveGroups().first;
-
-    var count = 0;
-
-    for (final group in groups) {
-      final enrollments =
-          await _enrollmentRepository
-              .watchEnrollmentsForGroup(group.id)
-              .first;
-
-      for (final enrollment in enrollments) {
-        if (activeMemberIds.contains(
-          enrollment.memberId,
-        )) {
-          count++;
-        }
-      }
-    }
-
-    return count;
-  }
-
-  Future<void> _refresh() async {
+    Future<void> _refresh() async {
     setState(() {
       _loadCounts();
     });

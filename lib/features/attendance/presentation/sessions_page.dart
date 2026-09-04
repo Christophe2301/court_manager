@@ -41,12 +41,16 @@ class _SessionsPageState extends State<SessionsPage> {
   void _loadData() {
     _sessionsFuture =
         _sessionRepository.getSessionsByTeacher(
-      widget.teacherId,
-    );
+  widget.teacherId,
+  '2026-2027',
+);
 
     _groupsFuture =
         _groupRepository
-            .watchGroupsForTeacher(widget.teacherId)
+            .watchGroupsForTeacher(
+  widget.teacherId,
+  '2026-2027',
+)
             .first;
   }
 
@@ -191,14 +195,15 @@ Future<void> _cancelSession(
 
   try {
     final cancelledSession = SessionModel(
-      id: session.id,
-      groupId: session.groupId,
-      teacherIds: session.teacherIds,
-      date: session.date,
-      startTime: session.startTime,
-      durationMinutes: session.durationMinutes,
-      status: 'cancelled',
-    );
+  id: session.id,
+  groupId: session.groupId,
+  seasonId: session.seasonId,
+  teacherIds: session.teacherIds,
+  date: session.date,
+  startTime: session.startTime,
+  durationMinutes: session.durationMinutes,
+  status: 'cancelled',
+);
 
     await _sessionRepository.updateSession(
       cancelledSession,
@@ -810,14 +815,15 @@ Future<void> _completeSession(
 
   try {
     final completedSession = SessionModel(
-      id: session.id,
-      groupId: session.groupId,
-      teacherIds: session.teacherIds,
-      date: session.date,
-      startTime: session.startTime,
-      durationMinutes: session.durationMinutes,
-      status: 'completed',
-    );
+  id: session.id,
+  groupId: session.groupId,
+  seasonId: session.seasonId,
+  teacherIds: session.teacherIds,
+  date: session.date,
+  startTime: session.startTime,
+  durationMinutes: session.durationMinutes,
+  status: 'completed',
+);
 
     await _sessionRepository.updateSession(
       completedSession,

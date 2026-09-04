@@ -74,6 +74,82 @@ Stream<List<Member>> watchActiveMembers() {
       );
 }
 
+Stream<List<Member>> watchMembersForSeason(
+  String seasonId,
+) {
+  return _firestore
+      .collection('members')
+      .where(
+        'seasonIds',
+        arrayContains: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Member.fromFirestore(doc),
+            )
+            .where(
+              (member) => member.isActive,
+            )
+            .toList()
+          ..sort(
+            (a, b) {
+              final lastNameCompare =
+                  a.lastName.compareTo(
+                b.lastName,
+              );
+
+              if (lastNameCompare != 0) {
+                return lastNameCompare;
+              }
+
+              return a.firstName.compareTo(
+                b.firstName,
+              );
+            },
+          ),
+      );
+}
+
+Stream<List<Member>> watchInactiveMembersForSeason(
+  String seasonId,
+) {
+  return _firestore
+      .collection('members')
+      .where(
+        'seasonIds',
+        arrayContains: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Member.fromFirestore(doc),
+            )
+            .where(
+              (member) => !member.isActive,
+            )
+            .toList()
+          ..sort(
+            (a, b) {
+              final lastNameCompare =
+                  a.lastName.compareTo(
+                b.lastName,
+              );
+
+              if (lastNameCompare != 0) {
+                return lastNameCompare;
+              }
+
+              return a.firstName.compareTo(
+                b.firstName,
+              );
+            },
+          ),
+      );
+}
+
 Future<bool> licenseNumberExists(
   String licenseNumber, {
   String? excludeMemberId,

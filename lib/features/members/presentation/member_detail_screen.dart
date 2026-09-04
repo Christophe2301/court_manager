@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../enrollments/data/enrollment_repository.dart';
 import '../../enrollments/providers/enrollment_provider.dart';
 import '../../groups/data/group_repository.dart';
 import '../data/member_repository.dart';
@@ -73,12 +74,19 @@ Future<void> _deactivateMember(
   }
 
   try {
-    await MemberRepository().deactivateMember(
-      member.id,
-      user.uid,
-    );
+  await EnrollmentRepository()
+      .deactivateEnrollmentsForMember(
+    memberId: member.id,
+    seasonId: '2026-2027',
+    updatedBy: user.uid,
+  );
 
-    if (!context.mounted) {
+  await MemberRepository().deactivateMember(
+    member.id,
+    user.uid,
+  );
+
+  if (!context.mounted) {
       return;
     }
 

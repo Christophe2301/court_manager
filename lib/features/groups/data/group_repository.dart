@@ -25,6 +25,50 @@ class GroupRepository {
         );
   }
 
+Stream<List<Group>> watchActiveGroupsForSeason(
+  String seasonId,
+) {
+  return _firestore
+      .collection('groups')
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Group.fromFirestore(doc),
+            )
+            .where(
+              (group) => group.isActive,
+            )
+            .toList(),
+      );
+}
+
+Stream<List<Group>> watchInactiveGroupsForSeason(
+  String seasonId,
+) {
+  return _firestore
+      .collection('groups')
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Group.fromFirestore(doc),
+            )
+            .where(
+              (group) => !group.isActive,
+            )
+            .toList(),
+      );
+}
+
 Stream<List<Group>> watchInactiveGroups() {
   return _firestore
       .collection('groups')
@@ -43,23 +87,28 @@ Stream<List<Group>> watchInactiveGroups() {
 }
 
   Stream<List<Group>> watchGroupsForTeacher(
-    String teacherId,
-  ) {
-    return _firestore
-        .collection('groups')
-        .where(
-          'teacherIds',
-          arrayContains: teacherId,
-        )
-        .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map(
-                (doc) => Group.fromFirestore(doc),
-              )
-              .toList(),
-        );
-  }
+  String teacherId,
+  String seasonId,
+) {
+  return _firestore
+      .collection('groups')
+      .where(
+        'teacherIds',
+        arrayContains: teacherId,
+      )
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs
+            .map(
+              (doc) => Group.fromFirestore(doc),
+            )
+            .toList(),
+      );
+}
 
 
   Future<void> createGroup(Group group) async {
