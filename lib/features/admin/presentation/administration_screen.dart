@@ -8,6 +8,7 @@ import '../../groups/data/group_repository.dart';
 import '../../groups/presentation/groups_screen.dart';
 import '../../enrollments/data/enrollment_repository.dart';
 import 'admin_sessions_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 class AdministrationScreen extends StatefulWidget {
   const AdministrationScreen({
@@ -48,7 +49,7 @@ class _AdministrationScreenState
     _membersCountFuture =
     _memberRepository
         .watchMembersForSeason(
-          '2026-2027',
+          currentSeasonId,
         )
         .first
         .then(
@@ -63,7 +64,7 @@ class _AdministrationScreenState
     _groupsCountFuture =
     _groupRepository
         .watchActiveGroupsForSeason(
-          '2026-2027',
+          currentSeasonId,
         )
         .first
         .then(
@@ -73,7 +74,7 @@ class _AdministrationScreenState
     _enrollmentsCountFuture =
     _enrollmentRepository
         .watchEnrollmentsForSeason(
-          '2026-2027',
+          currentSeasonId,
         )
         .first
         .then(

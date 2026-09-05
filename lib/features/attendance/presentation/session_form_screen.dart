@@ -6,6 +6,7 @@ import '../../../core/models/session_model.dart';
 import '../../auth/models/app_user.dart';
 import '../../groups/data/group_repository.dart';
 import '../data/session_repository.dart';
+import '../../../core/constants/app_constants.dart';
 
 class SessionFormScreen extends StatefulWidget {
   final String? teacherId;
@@ -63,7 +64,7 @@ class _SessionFormScreenState
           _groupRepository
               .watchGroupsForTeacher(
                 widget.teacherId!,
-                '2026-2027',
+                currentSeasonId,
               )
               .first;
 

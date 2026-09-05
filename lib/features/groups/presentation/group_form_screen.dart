@@ -7,6 +7,7 @@ import '../../../core/models/group.dart';
 import '../../teachers/providers/teacher_provider.dart';
 import '../../auth/models/app_user.dart';
 import '../data/group_repository.dart';
+import '../../../core/constants/app_constants.dart';
 
 class GroupFormScreen extends ConsumerStatefulWidget {
   final Group? group;
@@ -30,7 +31,7 @@ class _GroupFormScreenState
 
   final _seasonController =
       TextEditingController(
-    text: '2026-2027',
+    text: currentSeasonId,
   );
 
   final _startTimeController =

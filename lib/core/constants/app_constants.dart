@@ -1,0 +1,1 @@
+const String currentSeasonId = '2026-2027';

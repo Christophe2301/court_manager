@@ -7,6 +7,7 @@ import '../../groups/data/group_repository.dart';
 import 'attendance_screen.dart';
 import 'session_edit_screen.dart';
 import 'session_form_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 class SessionsPage extends StatefulWidget {
   final String teacherId;
@@ -42,14 +43,14 @@ class _SessionsPageState extends State<SessionsPage> {
     _sessionsFuture =
         _sessionRepository.getSessionsByTeacher(
   widget.teacherId,
-  '2026-2027',
+  currentSeasonId,
 );
 
     _groupsFuture =
         _groupRepository
             .watchGroupsForTeacher(
   widget.teacherId,
-  '2026-2027',
+  currentSeasonId,
 )
             .first;
   }

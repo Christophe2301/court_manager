@@ -12,6 +12,7 @@ import '../../attendance/presentation/attendance_screen.dart';
 import '../../attendance/presentation/sessions_page.dart';
 import '../../groups/providers/group_provider.dart';
 import '../../groups/presentation/teacher_groups_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 import '../widgets/welcome_card.dart';
 import '../../auth/data/auth_repository.dart';
@@ -52,7 +53,7 @@ final AuthRepository _authRepository =
       _sessionsFuture =
           _sessionRepository.getSessionsByTeacher(
   widget.user.uid,
-  '2026-2027',
+  currentSeasonId,
 );
     }
   }

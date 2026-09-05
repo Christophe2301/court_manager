@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/constants/app_constants.dart';
 
-const String _seasonId = '2026-2027';
 const String _teacherId = 'vLOZ73vvsLXbCaiGkXgPVJpxsTj2';
 
 Future<void> seedFirestore() async {
@@ -129,7 +129,7 @@ Future<void> seedFirestore() async {
     batch.set(ref, {
       'name': group['name'],
       'type': group['type'],
-      'seasonId': _seasonId,
+      'seasonId': currentSeasonId,
       'dayOfWeek': group['dayOfWeek'],
       'startTime': group['startTime'],
       'durationMinutes':
@@ -206,7 +206,7 @@ Future<void> seedFirestore() async {
     batch.set(ref, {
       'memberId': enrollment['memberId'],
       'groupId': enrollment['groupId'],
-      'seasonId': _seasonId,
+      'seasonId': currentSeasonId,
       'startDate': Timestamp.fromDate(
         DateTime(2026, 9, 1),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/group_repository.dart';
 import '../../../core/models/group.dart';
+import '../../../core/constants/app_constants.dart';
 
 
 final groupRepositoryProvider =
@@ -17,7 +18,7 @@ final activeGroupsProvider =
       ref.watch(groupRepositoryProvider);
 
   return repository.watchActiveGroupsForSeason(
-  '2026-2027',
+  currentSeasonId,
 );
 });
 
@@ -27,7 +28,7 @@ final inactiveGroupsProvider =
       ref.watch(groupRepositoryProvider);
 
   return repository.watchInactiveGroupsForSeason(
-  '2026-2027',
+  currentSeasonId,
 );
 });
 
@@ -40,7 +41,7 @@ final teacherGroupsProvider =
 
     return repository.watchGroupsForTeacher(
       teacherId,
-      '2026-2027',
+      currentSeasonId,
     );
   },
 );

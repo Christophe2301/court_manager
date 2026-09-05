@@ -10,6 +10,7 @@ import 'member_form_screen.dart';
 import '../../../core/models/member.dart';
 import '../../../core/models/group.dart';
 import 'member_group_transfer_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 class MemberDetailScreen extends ConsumerWidget {
   final Member member;
@@ -77,7 +78,7 @@ Future<void> _deactivateMember(
   await EnrollmentRepository()
       .deactivateEnrollmentsForMember(
     memberId: member.id,
-    seasonId: '2026-2027',
+    seasonId: currentSeasonId,
     updatedBy: user.uid,
   );
 

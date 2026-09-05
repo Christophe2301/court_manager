@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/models/member.dart';
+import '../../../core/constants/app_constants.dart';
 
 class MemberRepository {
   final FirebaseFirestore _firestore;
@@ -175,12 +176,14 @@ Future<bool> licenseNumberExists(
 Future<void> createMember(
   Member member,
 ) async {
+  final data = member.toFirestore();
+
+  data['seasonIds'] = [currentSeasonId];
+
   await _firestore
       .collection('members')
       .doc(member.id)
-      .set(
-        member.toFirestore(),
-      );
+      .set(data);
 }
 
 String newMemberId() {

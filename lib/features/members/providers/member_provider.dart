@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/member_repository.dart';
 import '../../../core/models/member.dart';
+import '../../../core/constants/app_constants.dart';
 
 
 final memberRepositoryProvider =
@@ -29,7 +30,7 @@ final activeMembersProvider =
       ref.watch(memberRepositoryProvider);
 
   return repository.watchMembersForSeason(
-  '2026-2027',
+  currentSeasonId,
 );
   
 });
@@ -40,6 +41,6 @@ final inactiveMembersProvider =
       ref.watch(memberRepositoryProvider);
 
   return repository.watchInactiveMembersForSeason(
-  '2026-2027',
+  currentSeasonId,
 );
 });
