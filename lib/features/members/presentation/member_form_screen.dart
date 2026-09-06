@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../data/member_repository.dart';
 import '../../../core/models/member.dart';
+import '../../../core/constants/app_constants.dart';
 
 class MemberFormScreen extends StatefulWidget {
   final Member? member;
@@ -106,27 +107,74 @@ Future<void> _save() async {
 
   final currentMember = widget.member;
 
-  final exists =
-      await repository.licenseNumberExists(
-    licenseNumber,
-    excludeMemberId: currentMember?.id,
-  );
+  final existingMember =
+    await repository.findMemberByLicenseNumber(
+  licenseNumber,
+);
 
-  if (exists) {
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Un adhérent possède déjà ce numéro de licence.',
-        ),
-      ),
-    );
-
+if (currentMember == null &&
+    existingMember != null) {
+  if (!mounted) {
     return;
   }
+
+  final reactivate = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Adhérent déjà existant',
+        ),
+        content: Text(
+          '${existingMember.firstName} '
+          '${existingMember.lastName} existe déjà.\n\n'
+          'Voulez-vous le réinscrire pour la saison '
+          '$currentSeasonId ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                false,
+              );
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text(
+              'Réinscrire',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (reactivate != true) {
+    return;
+  }
+
+  await repository.addSeasonToMember(
+    memberId: existingMember.id,
+    seasonId: currentSeasonId,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  Navigator.pop(context);
+  return;
+}
 
   final now = DateTime.now();
 

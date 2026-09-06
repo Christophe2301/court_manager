@@ -56,6 +56,31 @@ Stream<List<Enrollment>> watchEnrollmentsForSeason(
       );
 }
 
+Future<int> countActiveEnrollmentsForSeason(
+  String seasonId,
+) async {
+  final snapshot = await _firestore
+      .collection('enrollments')
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .get(
+        const GetOptions(
+          source: Source.server,
+        ),
+      );
+
+  return snapshot.docs
+      .map(
+        (doc) => Enrollment.fromFirestore(doc),
+      )
+      .where(
+        (enrollment) => enrollment.isActive,
+      )
+      .length;
+}
+
 Stream<List<Enrollment>> watchEnrollmentsForMember(
   String memberId,
 ) {

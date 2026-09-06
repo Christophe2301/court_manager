@@ -73,12 +73,8 @@ class _AdministrationScreenState
 
     _enrollmentsCountFuture =
     _enrollmentRepository
-        .watchEnrollmentsForSeason(
+        .countActiveEnrollmentsForSeason(
           currentSeasonId,
-        )
-        .first
-        .then(
-          (enrollments) => enrollments.length,
         );
   }
 

@@ -173,6 +173,43 @@ Future<bool> licenseNumberExists(
   return false;
 }
 
+Future<Member?> findMemberByLicenseNumber(
+  String licenseNumber,
+) async {
+  final snapshot = await _firestore
+      .collection('members')
+      .where(
+        'licenseNumber',
+        isEqualTo: licenseNumber.trim(),
+      )
+      .limit(1)
+      .get();
+
+  if (snapshot.docs.isEmpty) {
+    return null;
+  }
+
+  return Member.fromFirestore(
+    snapshot.docs.first,
+  );
+}
+
+Future<void> addSeasonToMember({
+  required String memberId,
+  required String seasonId,
+}) async {
+  await _firestore
+      .collection('members')
+      .doc(memberId)
+      .update({
+    'seasonIds': FieldValue.arrayUnion(
+      [seasonId],
+    ),
+    'isActive': true,
+    'updatedAt': Timestamp.now(),
+  });
+}
+
 Future<void> createMember(
   Member member,
 ) async {
