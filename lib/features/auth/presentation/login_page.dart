@@ -20,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _loading = false;
   String? _error;
+  bool _obscurePassword = true;
 
 
   Future<void> _login() async {
@@ -116,12 +117,27 @@ class _LoginPageState extends State<LoginPage> {
 
 
             TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: "Mot de passe",
-              ),
-            ),
+  controller: _passwordController,
+  obscureText: _obscurePassword,
+  decoration: InputDecoration(
+    labelText: "Mot de passe",
+    suffixIcon: IconButton(
+      icon: Icon(
+        _obscurePassword
+            ? Icons.visibility
+            : Icons.visibility_off,
+      ),
+      tooltip: _obscurePassword
+          ? "Afficher le mot de passe"
+          : "Masquer le mot de passe",
+      onPressed: () {
+        setState(() {
+          _obscurePassword = !_obscurePassword;
+        });
+      },
+    ),
+  ),
+),
 
 Align(
   alignment: Alignment.centerRight,

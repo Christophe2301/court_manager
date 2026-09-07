@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'firebase_options.dart';
@@ -14,12 +16,17 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  if (kIsWeb) {
+    await FirebaseAuth.instance.setPersistence(
+      Persistence.LOCAL,
+    );
+  }
+
   //await seedFirestore();
 
   runApp(
-  const ProviderScope(
-    child: CourtManagerApp(),
-  ),
-);
-
+    const ProviderScope(
+      child: CourtManagerApp(),
+    ),
+  );
 }
