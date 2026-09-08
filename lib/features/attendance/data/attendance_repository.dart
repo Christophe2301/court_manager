@@ -79,6 +79,7 @@ Future<List<Member>> getActiveMembers() async {
   Future<void> saveAttendances({
     required String sessionId,
     required Map<String, AttendanceStatus> attendance,
+    required Map<String, String> trialPersons,
     required String userId,
   }) async {
     final batch = _firestore.batch();
@@ -98,6 +99,7 @@ Future<List<Member>> getActiveMembers() async {
           id: doc.id,
           sessionId: sessionId,
           memberId: memberId,
+          trialName: trialPersons[memberId],
           status: status,
           comment: null,
           checkedAt: now,
@@ -131,6 +133,11 @@ Future<AttendanceScreenData>
     sessionId,
   );
 
+final attendanceRecords =
+    await getAttendanceRecordsBySession(
+  sessionId,
+);
+
   final availableMembers =
       await getActiveMembers();
 
@@ -141,13 +148,28 @@ Future<AttendanceScreenData>
   final regularMemberIds =
       members.map((member) => member.id).toSet();
 
+final trialPersons = <String, String>{};
+
+for (final attendance
+    in attendanceRecords) {
+  if (attendance.trialName != null &&
+      attendance.trialName!
+          .trim()
+          .isNotEmpty) {
+    trialPersons[
+            attendance.memberId] =
+        attendance.trialName!;
+  }
+}
+
   final temporaryMemberIds =
-      attendances.keys
-          .where(
-            (memberId) =>
-                !regularMemberIds.contains(memberId),
-          )
-          .toSet();
+    attendances.keys
+        .where(
+          (memberId) =>
+              !regularMemberIds.contains(memberId) &&
+              !trialPersons.containsKey(memberId),
+        )
+        .toSet();
 
   // --------------------------------------------------
   // Ajout des adhérents ponctuels à la liste des membres
@@ -177,8 +199,30 @@ Future<AttendanceScreenData>
     attendances: attendances,
     availableMembers: availableMembers,
     temporaryMemberIds: temporaryMemberIds,
+    trialPersons: trialPersons,
   );
 }
+  
+  Future<List<Attendance>>
+    getAttendanceRecordsBySession(
+  String sessionId,
+) async {
+  final snapshot = await _firestore
+      .collection('attendance')
+      .where(
+        'sessionId',
+        isEqualTo: sessionId,
+      )
+      .get();
+
+  return snapshot.docs
+      .map(
+        (doc) =>
+            Attendance.fromFirestore(doc),
+      )
+      .toList();
+}
+  
   Future<Map<String, AttendanceStatus>>
       getAttendancesBySession(
     String sessionId,
@@ -217,6 +261,19 @@ Future<Member?> getMemberById(
   }
 
   return Member.fromFirestore(doc);
+}
+
+Future<void> deleteTrialAttendance({
+  required String sessionId,
+  required String trialId,
+}) async {
+  final docId =
+      '${sessionId}_$trialId';
+
+  await _firestore
+      .collection('attendance')
+      .doc(docId)
+      .delete();
 }
 
 }

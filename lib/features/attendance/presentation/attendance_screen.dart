@@ -45,6 +45,11 @@ class _AttendanceScreenState
 
   final Set<String> _temporaryMemberIds = {};
 
+  final Map<String, String> _trialPersons = {};
+  final Set<String> _savedTrialPersonIds = {};
+
+  bool _trialPersonsInitialized = false;
+
   bool get _isEditable =>
       widget.session.status == 'planned';
 
@@ -70,16 +75,29 @@ class _AttendanceScreenState
   }
 
   Map<AttendanceStatus, int> _getStatusCounts() {
-    final counts =
-        <AttendanceStatus, int>{};
+  final counts =
+      <AttendanceStatus, int>{};
 
-    for (final status in _attendance.values) {
-      counts[status] =
-          (counts[status] ?? 0) + 1;
+  final visibleIds = <String>{
+    ..._members.map(
+      (member) => member.id,
+    ),
+    ..._trialPersons.keys,
+  };
+
+  for (final entry in _attendance.entries) {
+    if (!visibleIds.contains(entry.key)) {
+      continue;
     }
 
-    return counts;
+    final status = entry.value;
+
+    counts[status] =
+        (counts[status] ?? 0) + 1;
   }
+
+  return counts;
+}
 
   String _formatDate(DateTime date) {
     final day =
@@ -154,19 +172,24 @@ Future<void> _confirmSave() async {
   }
 
   await _repository.saveAttendances(
-    sessionId: widget.session.id,
-    attendance: _attendance,
-    userId: FirebaseAuth.instance.currentUser!.uid,
-  );
+  sessionId: widget.session.id,
+  attendance: _attendance,
+  trialPersons: _trialPersons,
+  userId: FirebaseAuth.instance.currentUser!.uid,
+);
 
   if (!mounted) {
     return;
   }
 
   setState(() {
-    _hasSavedAttendance = true;
-    _hasUnsavedChanges = false;
-  });
+  _savedTrialPersonIds.addAll(
+    _trialPersons.keys,
+  );
+
+  _hasSavedAttendance = true;
+  _hasUnsavedChanges = false;
+});
 
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(
@@ -395,6 +418,18 @@ Future<void> _confirmSave() async {
               data.temporaryMemberIds,
             );
 
+if (!_trialPersonsInitialized) {
+  _trialPersons.addAll(
+    data.trialPersons,
+  );
+
+  _savedTrialPersonIds.addAll(
+    data.trialPersons.keys,
+  );
+
+  _trialPersonsInitialized = true;
+}
+
             if (_attendance.isEmpty) {
               for (final member
                   in _members) {
@@ -582,29 +617,42 @@ Future<void> _confirmSave() async {
                           ),
 
                           SizedBox(
-                            width:
-                                double.infinity,
-                            child:
-                                OutlinedButton
-                                    .icon(
-                              icon:
-                                  const Icon(
-                                Icons.person_add,
-                              ),
-                              label:
-                                  const Text(
-                                'Ajouter un adhérent',
-                              ),
-                              onPressed:
-                                  _isEditable
-                                      ? () {
-                                          _addMember(
-                                            data.availableMembers,
-                                          );
-                                        }
-                                      : null,
-                            ),
-                          ),
+  width: double.infinity,
+  child: OutlinedButton.icon(
+    icon: const Icon(
+      Icons.person_add,
+    ),
+    label: const Text(
+      'Ajouter un adhérent',
+    ),
+    onPressed: _isEditable
+        ? () {
+            _addMember(
+              data.availableMembers,
+            );
+          }
+        : null,
+  ),
+),
+
+const SizedBox(
+  height: 8,
+),
+
+SizedBox(
+  width: double.infinity,
+  child: OutlinedButton.icon(
+    icon: const Icon(
+      Icons.science_outlined,
+    ),
+    label: const Text(
+      'Ajouter une personne à l’essai',
+    ),
+    onPressed: _isEditable
+        ? _addTrialPerson
+        : null,
+  ),
+),
                         ],
                       ),
                     ),
@@ -626,14 +674,178 @@ Future<void> _confirmSave() async {
                           vertical: 8,
                         ),
                         itemCount:
-                            members.length,
+    members.length +
+    _trialPersons.length,
                         itemBuilder:
                             (
                           context,
                           index,
                         ) {
-                          final member =
-                              members[index];
+                          if (index >= members.length) {
+  final trialIndex =
+      index - members.length;
+
+  final trialEntry =
+      _trialPersons.entries
+          .elementAt(trialIndex);
+
+  final trialId =
+      trialEntry.key;
+
+  final trialName =
+      trialEntry.value;
+
+  final status =
+      _attendance[trialId] ??
+          AttendanceStatus.trial;
+
+  return Card(
+    margin: const EdgeInsets.only(
+      bottom: 8,
+    ),
+    child: Padding(
+      padding:
+          const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 10,
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            child: Icon(
+              Icons.person_outline,
+            ),
+          ),
+
+          const SizedBox(
+            width: 12,
+          ),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        trialName,
+                        style:
+                            const TextStyle(
+                          fontSize: 16,
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                    Container(
+                      padding:
+                          const EdgeInsets
+                              .symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration:
+                          BoxDecoration(
+                        color: Colors
+                            .orange
+                            .shade100,
+                        borderRadius:
+                            BorderRadius
+                                .circular(
+                          12,
+                        ),
+                      ),
+                      child:
+                          const Text(
+                        'Essai',
+                        style:
+                            TextStyle(
+                          color:
+                              Colors.orange,
+                          fontSize: 12,
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(
+                  height: 3,
+                ),
+
+                Text(
+                  'Personne non adhérente',
+                  style: TextStyle(
+                    color:
+                        Colors.grey[600],
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(
+            width: 8,
+          ),
+IconButton(
+  icon: const Icon(
+    Icons.delete_outline,
+  ),
+  tooltip:
+      'Supprimer la personne à l’essai',
+  onPressed: _isEditable
+      ? () {
+          _deleteTrialPerson(
+            trialId,
+            trialName,
+          );
+        }
+      : null,
+),
+
+const SizedBox(
+  width: 4,
+),
+
+          IgnorePointer(
+            ignoring:
+                !_isEditable,
+            child: Opacity(
+              opacity:
+                  _isEditable
+                      ? 1.0
+                      : 0.65,
+              child:
+                  AttendanceStatusChip(
+                status: status,
+                onChanged:
+                    (newStatus) {
+                  setState(() {
+                    _attendance[
+                            trialId] =
+                        newStatus;
+
+                    _hasUnsavedChanges =
+                        true;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+final member =
+    members[index];
 
                           final status =
                               _attendance[
@@ -1153,6 +1365,152 @@ Future<void> _confirmSave() async {
       _hasUnsavedChanges = true;
     });
   }
+
+Future<void> _addTrialPerson() async {
+  final controller = TextEditingController();
+
+  final trialName = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Ajouter une personne à l’essai',
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Nom et prénom',
+          ),
+          onSubmitted: (value) {
+            final name = value.trim();
+
+            if (name.isNotEmpty) {
+              Navigator.of(dialogContext).pop(
+                name,
+              );
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name =
+                  controller.text.trim();
+
+              if (name.isEmpty) {
+                return;
+              }
+
+              Navigator.of(dialogContext).pop(
+                name,
+              );
+            },
+            child: const Text(
+              'Ajouter',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  controller.dispose();
+
+  if (trialName == null ||
+      trialName.trim().isEmpty) {
+    return;
+  }
+
+  final trialId =
+    'trial-${DateTime.now().millisecondsSinceEpoch}';
+
+setState(() {
+  _trialPersons[trialId] = trialName.trim();
+
+  _attendance[trialId] =
+      AttendanceStatus.trial;
+
+  _hasUnsavedChanges = true;
+});
+}
+
+Future<void> _deleteTrialPerson(
+  String trialId,
+  String trialName,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Supprimer la personne à l’essai ?',
+        ),
+        content: Text(
+          'Supprimer "$trialName" de cette séance ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text(
+              'Supprimer',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final wasSaved =
+    _savedTrialPersonIds.contains(trialId);
+
+setState(() {
+  _trialPersons.remove(trialId);
+  _attendance.remove(trialId);
+  _savedTrialPersonIds.remove(trialId);
+});
+
+if (wasSaved) {
+  await _repository.deleteTrialAttendance(
+    sessionId: widget.session.id,
+    trialId: trialId,
+  );
+}
+if (!mounted) {
+  return;
+}
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        '$trialName a été supprimé de la séance',
+      ),
+    ),
+  );
+}
 
   Future<void> _loadAttendances() async {
     final saved =

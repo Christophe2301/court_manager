@@ -280,9 +280,18 @@ match /enrollments/{enrollmentId} {
         ).data.teacherIds;
 
       // ----------------------------------------------------------
-      // Suppression : réservée à l'administrateur
-      // ----------------------------------------------------------
-      allow delete: if isAdmin();
+// Suppression : administrateur ou professeur de la séance
+// ----------------------------------------------------------
+allow delete: if isAdmin()
+  || (
+    isTeacher()
+    && exists(
+      /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+    )
+    && request.auth.uid in get(
+      /databases/$(database)/documents/sessions/$(resource.data.sessionId)
+    ).data.teacherIds
+  );
     }
   }
 }

@@ -40,6 +40,7 @@ class Attendance {
 
   final String sessionId;
   final String memberId;
+  final String? trialName;
 
   final AttendanceStatus status;
 
@@ -57,6 +58,7 @@ class Attendance {
     required this.id,
     required this.sessionId,
     required this.memberId,
+    this.trialName,
     required this.status,
     this.comment,
     this.checkedAt,
@@ -87,6 +89,9 @@ factory Attendance.fromFirestore(
 
     memberId:
         data['memberId'] ?? '',
+
+        trialName:
+    data['trialName'],
 
     status:
         AttendanceStatus.values.firstWhere(
@@ -132,6 +137,9 @@ Map<String, dynamic> toFirestore() {
 
     'memberId':
         memberId,
+
+'trialName':
+    trialName,
 
     'status':
         status.name,
