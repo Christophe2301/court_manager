@@ -2,15 +2,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/models/member.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../attendance/data/attendance_repository.dart';
 
 class MemberRepository {
   final FirebaseFirestore _firestore;
+  late final AttendanceRepository _attendanceRepository;
 
   MemberRepository({
-    FirebaseFirestore? firestore,
-  }) : _firestore =
-            firestore ?? FirebaseFirestore.instance;
-
+  FirebaseFirestore? firestore,
+}) : _firestore =
+          firestore ?? FirebaseFirestore.instance {
+  _attendanceRepository = AttendanceRepository(
+    firestore: _firestore,
+  );
+}
 
   Stream<List<Member>> watchMembersForGroup(
     String groupId,
@@ -300,6 +305,53 @@ Future<void> reactivateMember(
     ),
     'updatedBy': updatedBy,
   });
+}
+
+Future<void> deleteMemberPermanently(
+  String memberId,
+) async {
+  final hasHistory =
+      await _attendanceRepository
+          .hasAttendanceHistory(
+    memberId,
+  );
+
+  if (hasHistory) {
+    throw StateError(
+      'Cet adhérent possède un historique de présence '
+      'et ne peut pas être supprimé définitivement.',
+    );
+  }
+
+  final enrollmentsSnapshot =
+      await _firestore
+          .collection('enrollments')
+          .where(
+            'memberId',
+            isEqualTo: memberId,
+          )
+          .get(
+            const GetOptions(
+              source: Source.server,
+            ),
+          );
+
+  final memberRef = _firestore
+      .collection('members')
+      .doc(memberId);
+
+  final batch = _firestore.batch();
+
+  for (final enrollment
+      in enrollmentsSnapshot.docs) {
+    batch.delete(
+      enrollment.reference,
+    );
+  }
+
+  batch.delete(memberRef);
+
+  await batch.commit();
 }
 
 }

@@ -263,6 +263,25 @@ Future<Member?> getMemberById(
   return Member.fromFirestore(doc);
 }
 
+Future<bool> hasAttendanceHistory(
+  String memberId,
+) async {
+  final snapshot = await _firestore
+      .collection('attendance')
+      .where(
+        'memberId',
+        isEqualTo: memberId,
+      )
+      .limit(1)
+      .get(
+        const GetOptions(
+          source: Source.server,
+        ),
+      );
+
+  return snapshot.docs.isNotEmpty;
+}
+
 Future<void> deleteTrialAttendance({
   required String sessionId,
   required String trialId,

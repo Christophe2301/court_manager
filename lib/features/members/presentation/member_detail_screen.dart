@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../enrollments/data/enrollment_repository.dart';
 import '../../enrollments/providers/enrollment_provider.dart';
@@ -19,6 +20,28 @@ class MemberDetailScreen extends ConsumerWidget {
     super.key,
     required this.member,
   });
+
+Future<bool> _isCurrentUserAdmin() async {
+  final user =
+      FirebaseAuth.instance.currentUser;
+
+  if (user == null) {
+    return false;
+  }
+
+  final userDoc =
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get(
+            const GetOptions(
+              source: Source.server,
+            ),
+          );
+
+  return userDoc.data()?['role'] ==
+      'admin';
+}
 
 Future<void> _deactivateMember(
   BuildContext context,
@@ -101,6 +124,93 @@ Future<void> _deactivateMember(
       SnackBar(
         content: Text(
           'Erreur lors de la désactivation : $error',
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _deleteMemberPermanently(
+  BuildContext context,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text(
+          'Supprimer définitivement l’adhérent ?',
+        ),
+        content: Text(
+          'Vous êtes sur le point de supprimer définitivement '
+          '${member.fullName}.\n\n'
+          'Toutes ses inscriptions seront également supprimées.\n\n'
+          'Cette opération est irréversible et ne sera autorisée '
+          'que si cet adhérent ne possède aucun historique de présence.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(false);
+            },
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop(true);
+            },
+            child: const Text(
+              'Supprimer définitivement',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  try {
+    await MemberRepository()
+        .deleteMemberPermanently(
+      member.id,
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${member.fullName} a été supprimé définitivement.',
+        ),
+      ),
+    );
+
+    Navigator.of(context).pop();
+  } on StateError catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error.message.toString(),
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Impossible de supprimer cet adhérent : $error',
         ),
       ),
     );
@@ -228,33 +338,67 @@ actions: [
 },
   ),
 
-PopupMenuButton<String>(
-  onSelected: (value) {
-  if (value == 'deactivate') {
-    _deactivateMember(context);
-  }
+FutureBuilder<bool>(
+  future: _isCurrentUserAdmin(),
+  builder: (context, snapshot) {
+    final isAdmin =
+        snapshot.data ?? false;
 
-  if (value == 'reactivate') {
-    _reactivateMember(context);
-  }
-},
-  itemBuilder: (context) => [
-    if (member.isActive)
-      const PopupMenuItem<String>(
-        value: 'deactivate',
-        child: Text(
-          "Désactiver l’adhérent",
-        ),
-      ),
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        if (value == 'deactivate') {
+          _deactivateMember(context);
+        }
 
-    if (!member.isActive)
-      const PopupMenuItem<String>(
-        value: 'reactivate',
-        child: Text(
-          "Réactiver l’adhérent",
-        ),
-      ),
-  ],
+        if (value == 'reactivate') {
+          _reactivateMember(context);
+        }
+
+        if (value == 'delete' &&
+            isAdmin) {
+          _deleteMemberPermanently(
+            context,
+          );
+        }
+      },
+      itemBuilder: (context) => [
+        if (member.isActive)
+          const PopupMenuItem<String>(
+            value: 'deactivate',
+            child: Text(
+              "Désactiver l’adhérent",
+            ),
+          ),
+
+        if (!member.isActive)
+          const PopupMenuItem<String>(
+            value: 'reactivate',
+            child: Text(
+              "Réactiver l’adhérent",
+            ),
+          ),
+
+        if (isAdmin)
+          const PopupMenuDivider(),
+
+        if (isAdmin)
+          const PopupMenuItem<String>(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_forever,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Supprimer définitivement',
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  },
 ),
 ],
 ),
