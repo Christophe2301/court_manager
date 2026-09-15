@@ -8,31 +8,28 @@ import '../../groups/data/group_repository.dart';
 import '../../groups/presentation/groups_screen.dart';
 import '../../enrollments/data/enrollment_repository.dart';
 import 'admin_sessions_screen.dart';
+import '../data/court_manager_export_service.dart';
 import '../../../core/constants/app_constants.dart';
 
 class AdministrationScreen extends StatefulWidget {
-  const AdministrationScreen({
-    super.key,
-  });
+  const AdministrationScreen({super.key});
 
   @override
-  State<AdministrationScreen> createState() =>
-      _AdministrationScreenState();
+  State<AdministrationScreen> createState() => _AdministrationScreenState();
 }
 
-class _AdministrationScreenState
-    extends State<AdministrationScreen> {
-  final MemberRepository _memberRepository =
-      MemberRepository();
+class _AdministrationScreenState extends State<AdministrationScreen> {
+  final MemberRepository _memberRepository = MemberRepository();
 
-  final TeacherRepository _teacherRepository =
-      TeacherRepository();
+  final TeacherRepository _teacherRepository = TeacherRepository();
 
-  final GroupRepository _groupRepository =
-      GroupRepository();
+  final GroupRepository _groupRepository = GroupRepository();
 
-  final EnrollmentRepository _enrollmentRepository =
-      EnrollmentRepository();
+  final EnrollmentRepository _enrollmentRepository = EnrollmentRepository();
+
+  final CourtManagerExportService _exportService = CourtManagerExportService();
+
+  bool _isExporting = false;
 
   late Future<int> _membersCountFuture;
   late Future<int> _teachersCountFuture;
@@ -46,39 +43,25 @@ class _AdministrationScreenState
   }
 
   void _loadCounts() {
-    _membersCountFuture =
-    _memberRepository
-        .watchMembersForSeason(
-          currentSeasonId,
-        )
+    _membersCountFuture = _memberRepository
+        .watchMembersForSeason(currentSeasonId)
         .first
-        .then(
-          (members) => members.length,
-        );
+        .then((members) => members.length);
 
-    _teachersCountFuture =
-        _teacherRepository.watchActiveTeachers().first.then(
-              (teachers) => teachers.length,
-            );
+    _teachersCountFuture = _teacherRepository.watchActiveTeachers().first.then(
+      (teachers) => teachers.length,
+    );
 
-    _groupsCountFuture =
-    _groupRepository
-        .watchActiveGroupsForSeason(
-          currentSeasonId,
-        )
+    _groupsCountFuture = _groupRepository
+        .watchActiveGroupsForSeason(currentSeasonId)
         .first
-        .then(
-          (groups) => groups.length,
-        );
+        .then((groups) => groups.length);
 
-    _enrollmentsCountFuture =
-    _enrollmentRepository
-        .countActiveEnrollmentsForSeason(
-          currentSeasonId,
-        );
+    _enrollmentsCountFuture = _enrollmentRepository
+        .countActiveEnrollmentsForSeason(currentSeasonId);
   }
 
-    Future<void> _refresh() async {
+  Future<void> _refresh() async {
     setState(() {
       _loadCounts();
     });
@@ -91,15 +74,10 @@ class _AdministrationScreenState
     ]);
   }
 
-  Future<void> _openScreen(
-    BuildContext context,
-    Widget screen,
-  ) async {
+  Future<void> _openScreen(BuildContext context, Widget screen) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => screen,
-      ),
+      MaterialPageRoute(builder: (context) => screen),
     );
 
     if (!context.mounted) {
@@ -107,6 +85,45 @@ class _AdministrationScreenState
     }
 
     await _refresh();
+  }
+
+  Future<void> _exportData() async {
+    if (_isExporting) {
+      return;
+    }
+
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final fileName = await _exportService.exportSeason(currentSeasonId);
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Export créé : $fileName')));
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Impossible de créer l’export : $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+        });
+      }
+    }
   }
 
   Widget _buildStatCard({
@@ -131,48 +148,33 @@ class _AdministrationScreenState
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color:
-                        color.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(14),
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 28,
-                  ),
+                  child: Icon(icon, color: color, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
                       ),
                       const SizedBox(height: 4),
-                      if (snapshot.connectionState ==
-                          ConnectionState.waiting)
+                      if (snapshot.connectionState == ConnectionState.waiting)
                         const SizedBox(
                           width: 20,
                           height: 20,
-                          child:
-                              CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       else if (snapshot.hasError)
                         const Text(
                           'Erreur',
                           style: TextStyle(
                             color: Colors.red,
-                            fontWeight:
-                                FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                           ),
                         )
                       else
@@ -180,8 +182,7 @@ class _AdministrationScreenState
                           '${value ?? 0}',
                           style: const TextStyle(
                             fontSize: 25,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                     ],
@@ -195,29 +196,16 @@ class _AdministrationScreenState
     );
   }
 
-  Widget _buildSectionTitle(
-    String title,
-    IconData icon,
-  ) {
+  Widget _buildSectionTitle(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.only(
-        left: 4,
-        top: 20,
-        bottom: 10,
-      ),
+      padding: const EdgeInsets.only(left: 4, top: 20, bottom: 10),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-          ),
+          Icon(icon, size: 20),
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -233,29 +221,13 @@ class _AdministrationScreenState
   }) {
     return Card(
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 4,
-        ),
-        leading: CircleAvatar(
-          child: Icon(icon),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: CircleAvatar(child: Icon(icon)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(subtitle),
-        trailing: const Icon(
-          Icons.chevron_right,
-        ),
+        trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          _openScreen(
-            context,
-            screen,
-          );
+          _openScreen(context, screen);
         },
       ),
     );
@@ -264,35 +236,20 @@ class _AdministrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Administration',
-        ),
-      ),
+      appBar: AppBar(title: const Text('Administration')),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            8,
-            16,
-            24,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             const Text(
               'Vue d’ensemble',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
               'Gestion du club',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 15,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 15),
             ),
 
             _buildStatCard(
@@ -327,17 +284,13 @@ class _AdministrationScreenState
               color: Colors.purple,
             ),
 
-            _buildSectionTitle(
-              'Gestion',
-              Icons.settings,
-            ),
+            _buildSectionTitle('Gestion', Icons.settings),
 
             _buildManagementCard(
               context: context,
               icon: Icons.people,
               title: 'Adhérents',
-              subtitle:
-                  'Gérer les adhérents du club',
+              subtitle: 'Gérer les adhérents du club',
               screen: const MembersScreen(),
             ),
 
@@ -345,8 +298,7 @@ class _AdministrationScreenState
               context: context,
               icon: Icons.school,
               title: 'Professeurs',
-              subtitle:
-                  'Gérer les professeurs du club',
+              subtitle: 'Gérer les professeurs du club',
               screen: const TeachersScreen(),
             ),
 
@@ -354,46 +306,60 @@ class _AdministrationScreenState
               context: context,
               icon: Icons.groups,
               title: 'Groupes',
-              subtitle:
-                  'Gérer les groupes du club',
+              subtitle: 'Gérer les groupes du club',
               screen: const GroupsScreen(),
             ),
-_buildManagementCard(
-  context: context,
-  icon: Icons.calendar_month,
-  title: 'Séances',
-  subtitle: 'Gérer les séances du club',
-  screen: const AdminSessionsScreen(),
-),
-            _buildSectionTitle(
-              'Prochaine version',
-              Icons.upcoming,
+            _buildManagementCard(
+              context: context,
+              icon: Icons.calendar_month,
+              title: 'Séances',
+              subtitle: 'Gérer les séances du club',
+              screen: const AdminSessionsScreen(),
             ),
+            _buildSectionTitle('Export', Icons.download),
 
             Card(
               child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 4,
                 ),
-                leading: const CircleAvatar(
-                  child: Icon(
-                    Icons.calendar_month,
-                  ),
+                leading: CircleAvatar(
+                  child: _isExporting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.table_view),
                 ),
                 title: const Text(
+                  'Exporter les données',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Adhérents, groupes et inscriptions '
+                  'de la saison $currentSeasonId',
+                ),
+                trailing: const Icon(Icons.download),
+                onTap: _isExporting ? null : _exportData,
+              ),
+            ),
+            _buildSectionTitle('Prochaine version', Icons.upcoming),
+
+            Card(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                leading: const CircleAvatar(child: Icon(Icons.calendar_month)),
+                title: const Text(
                   'Saisons',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
-                subtitle: const Text(
-                  'Gestion des saisons du club',
-                ),
-                trailing: const Chip(
-                  label: Text('V2'),
-                ),
+                subtitle: const Text('Gestion des saisons du club'),
+                trailing: const Chip(label: Text('V2')),
               ),
             ),
           ],
