@@ -8,6 +8,7 @@ import 'attendance_screen.dart';
 import 'session_edit_screen.dart';
 import 'session_form_screen.dart';
 import '../../../core/constants/app_constants.dart';
+import '../data/attendance_repository.dart';
 
 class SessionsPage extends StatefulWidget {
   final String teacherId;
@@ -26,11 +27,16 @@ class _SessionsPageState extends State<SessionsPage> {
   final SessionRepository _sessionRepository =
       SessionRepository();
 
+  final AttendanceRepository _attendanceRepository =
+    AttendanceRepository();
+
   final GroupRepository _groupRepository =
       GroupRepository();
 
   late Future<List<SessionModel>> _sessionsFuture;
   late Future<List<Group>> _groupsFuture;
+  late Future<Set<String>>
+    _sessionIdsWithAttendanceFuture;
 
   @override
   void initState() {
@@ -53,6 +59,38 @@ class _SessionsPageState extends State<SessionsPage> {
   currentSeasonId,
 )
             .first;
+
+            _sessionIdsWithAttendanceFuture =
+    _sessionsFuture.then(
+  (sessions) {
+    final now = DateTime.now();
+
+    final today = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final pastSessionIds = sessions
+        .where((session) {
+          final sessionDate = DateTime(
+            session.date.year,
+            session.date.month,
+            session.date.day,
+          );
+
+          return sessionDate.isBefore(today) &&
+              session.status != 'cancelled';
+        })
+        .map((session) => session.id)
+        .toList();
+
+    return _attendanceRepository
+        .getSessionIdsWithAttendance(
+      pastSessionIds,
+    );
+  },
+);
   }
 
   Future<void> _refreshSessions() async {
@@ -696,80 +734,139 @@ if (session.status == 'planned')
 
               final now = DateTime.now();
 
-              final today = <SessionModel>[];
-              final upcoming = <SessionModel>[];
-              final past = <SessionModel>[];
+return FutureBuilder<Set<String>>(
+  future: _sessionIdsWithAttendanceFuture,
+  builder: (
+    context,
+    attendanceSnapshot,
+  ) {
+    if (attendanceSnapshot.connectionState ==
+        ConnectionState.waiting) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-              for (final session in sessions) {
-                if (_isSameDay(
-                  session.date,
-                  now,
-                )) {
-                  today.add(session);
-                } else if (session.date
-                    .isAfter(now)) {
-                  upcoming.add(session);
-                } else {
-                  past.add(session);
-                }
-              }
+    if (attendanceSnapshot.hasError) {
+      return Center(
+        child: Text(
+          'Erreur lors du chargement '
+          'des appels : '
+          '${attendanceSnapshot.error}',
+        ),
+      );
+    }
 
-              return RefreshIndicator(
-                onRefresh: _refreshSessions,
-                child: ListView(
-                  padding:
-                      const EdgeInsets.all(12),
-                  children: [
-                    if (today.isNotEmpty) ...[
-                      _buildSectionTitle(
-                        "Aujourd'hui",
-                        Icons.today,
-                      ),
-                      ...today.map(
-                        (session) =>
-                            _buildSessionCard(
-                          context,
-                          session,
-                          groupsById,
-                          true,
-                        ),
-                      ),
-                    ],
+    final sessionIdsWithAttendance =
+        attendanceSnapshot.data ?? <String>{};
 
-                    if (upcoming.isNotEmpty) ...[
-                      _buildSectionTitle(
-                        'À venir',
-                        Icons.event,
-                      ),
-                      ...upcoming.map(
-                        (session) =>
-                            _buildSessionCard(
-                          context,
-                          session,
-                          groupsById,
-                          false,
-                        ),
-                      ),
-                    ],
+    final pendingAttendance =
+        <SessionModel>[];
+    final today = <SessionModel>[];
+    final upcoming = <SessionModel>[];
+    final past = <SessionModel>[];
 
-                    if (past.isNotEmpty) ...[
-                      _buildSectionTitle(
-                        'Passées',
-                        Icons.history,
-                      ),
-                      ...past.map(
-                        (session) =>
-                            _buildSessionCard(
-                          context,
-                          session,
-                          groupsById,
-                          false,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
+    for (final session in sessions) {
+      final isCancelled =
+          session.status == 'cancelled';
+
+      final hasAttendance =
+          sessionIdsWithAttendance.contains(
+        session.id,
+      );
+
+      if (_isSameDay(
+        session.date,
+        now,
+      )) {
+        today.add(session);
+      } else if (session.date.isAfter(now)) {
+        upcoming.add(session);
+      } else if (!isCancelled &&
+          !hasAttendance) {
+        pendingAttendance.add(session);
+      } else {
+        past.add(session);
+      }
+    }
+
+    pendingAttendance.sort(
+      (a, b) => a.date.compareTo(b.date),
+    );
+
+    return RefreshIndicator(
+      onRefresh: _refreshSessions,
+      child: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          if (pendingAttendance.isNotEmpty) ...[
+            _buildSectionTitle(
+              'Appels à valider',
+              Icons.notification_important_outlined,
+            ),
+            ...pendingAttendance.map(
+              (session) =>
+                  _buildSessionCard(
+                context,
+                session,
+                groupsById,
+                false,
+              ),
+            ),
+          ],
+
+          if (today.isNotEmpty) ...[
+            _buildSectionTitle(
+              "Aujourd'hui",
+              Icons.today,
+            ),
+            ...today.map(
+              (session) =>
+                  _buildSessionCard(
+                context,
+                session,
+                groupsById,
+                true,
+              ),
+            ),
+          ],
+
+          if (upcoming.isNotEmpty) ...[
+            _buildSectionTitle(
+              'À venir',
+              Icons.event,
+            ),
+            ...upcoming.map(
+              (session) =>
+                  _buildSessionCard(
+                context,
+                session,
+                groupsById,
+                false,
+              ),
+            ),
+          ],
+
+          if (past.isNotEmpty) ...[
+            _buildSectionTitle(
+              'Passées',
+              Icons.history,
+            ),
+            ...past.map(
+              (session) =>
+                  _buildSessionCard(
+                context,
+                session,
+                groupsById,
+                false,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  },
+);
             },
           );
         },

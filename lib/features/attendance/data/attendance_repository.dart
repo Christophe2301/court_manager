@@ -263,6 +263,37 @@ Future<Member?> getMemberById(
   return Member.fromFirestore(doc);
 }
 
+Future<Set<String>> getSessionIdsWithAttendance(
+  List<String> sessionIds,
+) async {
+  final results = await Future.wait(
+    sessionIds.map(
+      (sessionId) async {
+        final snapshot = await _firestore
+            .collection('attendance')
+            .where(
+              'sessionId',
+              isEqualTo: sessionId,
+            )
+            .limit(1)
+            .get(
+              const GetOptions(
+                source: Source.server,
+              ),
+            );
+
+        return snapshot.docs.isNotEmpty
+            ? sessionId
+            : null;
+      },
+    ),
+  );
+
+  return results
+      .whereType<String>()
+      .toSet();
+}
+
 Future<bool> hasAttendanceHistory(
   String memberId,
 ) async {
@@ -293,6 +324,23 @@ Future<void> deleteTrialAttendance({
       .collection('attendance')
       .doc(docId)
       .delete();
+}
+
+Future<Set<String>> getAllSessionIdsWithAttendance() async {
+  final snapshot = await _firestore
+      .collection('attendance')
+      .get(
+        const GetOptions(
+          source: Source.server,
+        ),
+      );
+
+  return snapshot.docs
+      .map(
+        (doc) => doc.data()['sessionId'] as String?,
+      )
+      .whereType<String>()
+      .toSet();
 }
 
 }

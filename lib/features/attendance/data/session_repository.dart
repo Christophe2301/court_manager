@@ -45,6 +45,28 @@ Future<List<SessionModel>> getAllSessions() async {
       .toList();
 }
 
+Future<List<SessionModel>> getSessionsBySeason(
+  String seasonId,
+) async {
+  final snapshot = await _firestore
+      .collection('sessions')
+      .where(
+        'seasonId',
+        isEqualTo: seasonId,
+      )
+      .orderBy('date')
+      .get();
+
+  return snapshot.docs
+      .map(
+        (doc) => SessionModel.fromFirestore(
+          doc.data(),
+          doc.id,
+        ),
+      )
+      .toList();
+}
+
 Future<List<SessionModel>> getSessionsByTeacher(
   String teacherId,
   String seasonId,

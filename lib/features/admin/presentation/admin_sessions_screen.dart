@@ -9,9 +9,12 @@ import '../../attendance/presentation/session_form_screen.dart';
 import '../../groups/data/group_repository.dart';
 import '../../auth/models/app_user.dart';
 import '../../teachers/data/teacher_repository.dart';
+import '../../attendance/data/attendance_repository.dart';
+import '../../../core/constants/app_constants.dart';
 
 enum _SessionPeriodFilter {
   upcoming,
+  toValidate,
   past,
   all,
 }
@@ -31,6 +34,9 @@ class _AdminSessionsScreenState
   final SessionRepository _sessionRepository =
       SessionRepository();
 
+      final AttendanceRepository _attendanceRepository =
+    AttendanceRepository();
+
   final GroupRepository _groupRepository =
       GroupRepository();
 
@@ -38,6 +44,9 @@ final TeacherRepository _teacherRepository =
     TeacherRepository();
 
 late Future<List<AppUser>> _teachersFuture;
+
+late Future<Set<String>>
+    _sessionIdsWithAttendanceFuture;
 
 _SessionPeriodFilter _periodFilter =
     _SessionPeriodFilter.upcoming;
@@ -56,7 +65,13 @@ String? _selectedTeacherId;
 
   void _loadData() {
   _sessionsFuture =
-      _sessionRepository.getAllSessions();
+    _sessionRepository.getSessionsBySeason(
+  currentSeasonId,
+);
+
+      _sessionIdsWithAttendanceFuture =
+    _attendanceRepository
+        .getAllSessionIdsWithAttendance();
 
   _groupsFuture =
       _groupRepository.watchActiveGroups().first;
@@ -111,6 +126,92 @@ String? _selectedTeacherId;
     await _refresh();
   }
 
+Future<void> _markSessionCompleted(
+  SessionModel session,
+) async {
+  final confirmed =
+      await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Marquer la séance comme terminée',
+        ),
+        content: Text(
+          'Voulez-vous marquer la séance du '
+          '${_formatDate(session.date)} '
+          'à ${session.startTime} '
+          'comme terminée ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                false,
+              );
+            },
+            child: const Text(
+              'Annuler',
+            ),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text(
+              'Confirmer',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final updatedSession =
+      SessionModel(
+    id: session.id,
+    groupId: session.groupId,
+    seasonId: session.seasonId,
+    teacherIds: session.teacherIds,
+    date: session.date,
+    startTime: session.startTime,
+    durationMinutes:
+        session.durationMinutes,
+    status: 'completed',
+  );
+
+  await _sessionRepository.updateSession(
+    updatedSession,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  await _refresh();
+
+  if (!mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context)
+      .showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Séance marquée comme terminée.',
+      ),
+    ),
+  );
+}
+
   void _openAttendance(
     SessionModel session,
   ) {
@@ -145,6 +246,7 @@ DateTime _dateOnly(DateTime date) {
 
 bool _matchesPeriod(
   SessionModel session,
+  Set<String> sessionIdsWithAttendance,
 ) {
   final today =
       _dateOnly(DateTime.now());
@@ -156,6 +258,13 @@ bool _matchesPeriod(
     case _SessionPeriodFilter.upcoming:
       return !sessionDate.isBefore(today);
 
+    case _SessionPeriodFilter.toValidate:
+      return sessionDate.isBefore(today) &&
+          session.status != 'cancelled' &&
+          !sessionIdsWithAttendance.contains(
+            session.id,
+          );
+
     case _SessionPeriodFilter.past:
       return sessionDate.isBefore(today);
 
@@ -166,9 +275,13 @@ bool _matchesPeriod(
 
 List<SessionModel> _filterSessions(
   List<SessionModel> sessions,
+  Set<String> sessionIdsWithAttendance,
 ) {
   return sessions.where((session) {
-    if (!_matchesPeriod(session)) {
+    if (!_matchesPeriod(
+      session,
+      sessionIdsWithAttendance,
+    )) {
       return false;
     }
 
@@ -296,6 +409,12 @@ List<SessionModel> _filterSessions(
                 );
                 break;
 
+                case 'complete':
+  await _markSessionCompleted(
+    session,
+  );
+  break;
+
               case 'edit':
                 await _editSession(
                   session,
@@ -324,6 +443,22 @@ List<SessionModel> _filterSessions(
                 ],
               ),
             ),
+            if (session.status != 'completed' &&
+    session.status != 'cancelled')
+  const PopupMenuItem<String>(
+    value: 'complete',
+    child: Row(
+      children: [
+        Icon(
+          Icons.check_circle_outline,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Marquer comme terminée',
+        ),
+      ],
+    ),
+  ),
             const PopupMenuItem<String>(
               value: 'edit',
               child: Row(
@@ -482,10 +617,39 @@ return FutureBuilder<List<AppUser>>(
     }
 
     final teachers =
-        teacherSnapshot.data ?? [];
+    teacherSnapshot.data ?? [];
+
+return FutureBuilder<Set<String>>(
+  future: _sessionIdsWithAttendanceFuture,
+  builder: (
+    context,
+    attendanceSnapshot,
+  ) {
+    if (attendanceSnapshot.connectionState ==
+        ConnectionState.waiting) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (attendanceSnapshot.hasError) {
+      return Center(
+        child: Text(
+          'Erreur lors du chargement '
+          'des appels : '
+          '${attendanceSnapshot.error}',
+        ),
+      );
+    }
+
+    final sessionIdsWithAttendance =
+        attendanceSnapshot.data ?? <String>{};
 
     final filteredSessions =
-        _filterSessions(sessions);
+        _filterSessions(
+      sessions,
+      sessionIdsWithAttendance,
+    );
 
     final sortedSessions =
     [...filteredSessions];
@@ -634,6 +798,14 @@ return Column(
                     'À venir',
                   ),
                 ),
+                DropdownMenuItem(
+  value:
+      _SessionPeriodFilter
+          .toValidate,
+  child: Text(
+    'À valider',
+  ),
+),
                 DropdownMenuItem(
                   value:
                       _SessionPeriodFilter
@@ -788,7 +960,11 @@ return Column(
             },
           );
         },
-      ),
+        
+      );
+        },
+          ),
+      
     );
   }
 
