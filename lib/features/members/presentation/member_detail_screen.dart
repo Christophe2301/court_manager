@@ -581,7 +581,14 @@ class _InfoRow extends StatelessWidget {
             'Erreur : $error',
           ),
           data: (enrollments) {
-            if (enrollments.isEmpty) {
+  final currentSeasonEnrollments = enrollments
+      .where(
+        (enrollment) =>
+            enrollment.seasonId == currentSeasonId,
+      )
+      .toList();
+
+  if (currentSeasonEnrollments.isEmpty) {
               return const _InfoRow(
                 label: 'Inscription',
                 value: 'Aucun groupe',
@@ -589,7 +596,7 @@ class _InfoRow extends StatelessWidget {
             }
 
             return Column(
-              children: enrollments.map(
+              children: currentSeasonEnrollments.map(
                 (enrollment) {
                   return FutureBuilder<Group?>(
                     future: GroupRepository()
