@@ -212,6 +212,164 @@ Future<void> _markSessionCompleted(
   );
 }
 
+Future<void> _cancelSession(
+  SessionModel session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Annuler la séance',
+        ),
+        content: Text(
+          'Voulez-vous annuler la séance du '
+          '${_formatDate(session.date)} '
+          'à ${session.startTime} ?\n\n'
+          'La séance sera conservée dans '
+          'l’historique.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                false,
+              );
+            },
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text(
+              'Annuler la séance',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final updatedSession = SessionModel(
+    id: session.id,
+    groupId: session.groupId,
+    seasonId: session.seasonId,
+    teacherIds: session.teacherIds,
+    date: session.date,
+    startTime: session.startTime,
+    durationMinutes: session.durationMinutes,
+    status: 'cancelled',
+  );
+
+  await _sessionRepository.updateSession(
+    updatedSession,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  await _refresh();
+
+  if (!mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Séance annulée.',
+      ),
+    ),
+  );
+}
+
+Future<void> _reactivateSession(
+  SessionModel session,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'Réactiver la séance',
+        ),
+        content: Text(
+          'Voulez-vous réactiver la séance du '
+          '${_formatDate(session.date)} '
+          'à ${session.startTime} ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                false,
+              );
+            },
+            child: const Text('Retour'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text('Réactiver'),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
+  }
+
+  final updatedSession = SessionModel(
+    id: session.id,
+    groupId: session.groupId,
+    seasonId: session.seasonId,
+    teacherIds: session.teacherIds,
+    date: session.date,
+    startTime: session.startTime,
+    durationMinutes: session.durationMinutes,
+    status: 'planned',
+  );
+
+  await _sessionRepository.updateSession(
+    updatedSession,
+  );
+
+  if (!mounted) {
+    return;
+  }
+
+  await _refresh();
+
+  if (!mounted) {
+    return;
+  }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Séance réactivée.',
+      ),
+    ),
+  );
+}
+
   void _openAttendance(
     SessionModel session,
   ) {
@@ -414,7 +572,16 @@ List<SessionModel> _filterSessions(
     session,
   );
   break;
-
+case 'cancel':
+  await _cancelSession(
+    session,
+  );
+  break;
+  case 'reactivate':
+  await _reactivateSession(
+    session,
+  );
+  break;
               case 'edit':
                 await _editSession(
                   session,
@@ -455,6 +622,37 @@ List<SessionModel> _filterSessions(
         SizedBox(width: 10),
         Text(
           'Marquer comme terminée',
+        ),
+      ],
+    ),
+  ),
+            if (session.status != 'completed' &&
+    session.status != 'cancelled')
+  const PopupMenuItem<String>(
+    value: 'cancel',
+    child: Row(
+      children: [
+        Icon(
+          Icons.cancel_outlined,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Annuler la séance',
+        ),
+      ],
+    ),
+  ),
+            if (session.status == 'cancelled')
+  const PopupMenuItem<String>(
+    value: 'reactivate',
+    child: Row(
+      children: [
+        Icon(
+          Icons.restore_outlined,
+        ),
+        SizedBox(width: 10),
+        Text(
+          'Réactiver la séance',
         ),
       ],
     ),

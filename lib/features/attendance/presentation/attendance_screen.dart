@@ -481,7 +481,7 @@ if (!_trialPersonsInitialized) {
                   }
                 }
 
-                return Column(
+                return ListView(
                   children: [
                     _buildSessionHeader(
                       context,
@@ -664,15 +664,14 @@ SizedBox(
                     // -----------------------------------------
                     // Liste des adhérents
                     // -----------------------------------------
-                    Expanded(
-                      child:
-                          ListView.builder(
-                        padding:
-                            const EdgeInsets
-                                .symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                    ListView.builder(
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  padding:
+      const EdgeInsets.symmetric(
+    horizontal: 12,
+    vertical: 8,
+  ),
                         itemCount:
     members.length +
     _trialPersons.length,
@@ -1000,7 +999,7 @@ final member =
                           );
                         },
                       ),
-                    ),
+                    
 
                     // -----------------------------------------
                     // Bouton d'enregistrement
