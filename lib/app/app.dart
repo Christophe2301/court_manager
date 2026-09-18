@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import '../core/version/web_version_checker.dart';
 
 import '../features/auth/presentation/auth_gate.dart';
 import 'theme.dart';
@@ -22,11 +23,9 @@ class CourtManagerApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      supportedLocales: const [
-        Locale('fr', 'FR'),
-      ],
+      supportedLocales: const [Locale('fr', 'FR')],
 
-      home: const AuthGate(),
+      home: const WebVersionChecker(child: AuthGate()),
     );
   }
 }
