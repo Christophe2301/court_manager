@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'web_reload_stub.dart'
     if (dart.library.js_interop) 'web_reload_browser.dart';
@@ -18,22 +19,38 @@ class WebVersionChecker extends StatefulWidget {
 }
 
 class _WebVersionCheckerState extends State<WebVersionChecker> {
-  static const String _currentVersion = '1.0.0+3';
-
   Timer? _timer;
   bool _dialogDisplayed = false;
+  String? _runningVersion;
 
   @override
   void initState() {
     super.initState();
 
     if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkVersion());
+      _initializeVersionChecker();
+    }
+  }
+
+  Future<void> _initializeVersionChecker() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+
+      _runningVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+
+      if (!mounted) {
+        return;
+      }
+
+      await _checkVersion();
 
       _timer = Timer.periodic(
         const Duration(minutes: 5),
         (_) => _checkVersion(),
       );
+    } catch (_) {
+      // Un problème de détection de version ne doit jamais
+      // empêcher CourtManager de fonctionner.
     }
   }
 
@@ -44,7 +61,7 @@ class _WebVersionCheckerState extends State<WebVersionChecker> {
   }
 
   Future<void> _checkVersion() async {
-    if (!kIsWeb || _dialogDisplayed) {
+    if (!kIsWeb || _dialogDisplayed || _runningVersion == null) {
       return;
     }
 
@@ -74,10 +91,19 @@ class _WebVersionCheckerState extends State<WebVersionChecker> {
 
       if (serverVersion == null ||
           serverVersion.isEmpty ||
-          serverVersion == _currentVersion) {
+          serverVersion == _runningVersion) {
+        debugPrint(
+          'Version CourtManager : '
+          'application=$_runningVersion, '
+          'serveur=$serverVersion',
+        );
         return;
       }
-
+      debugPrint(
+        'Version CourtManager : '
+        'application=$_runningVersion, '
+        'serveur=$serverVersion',
+      );
       if (!mounted) {
         return;
       }
